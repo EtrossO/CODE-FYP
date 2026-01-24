@@ -156,12 +156,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                   </svg>
                 </div>
                 <div>
-                  <p className="text-xs text-cyan-400 font-black uppercase tracking-tighter">Campus Shield Pro</p>
+                  <p className="text-xs text-cyan-400 font-black uppercase tracking-tighter">UPTM Campus Shield</p>
                   <p className="text-[10px] text-gray-500">Secure • Fast • Reliable</p>
                 </div>
               </div>
-              <p className="text-[10px] text-gray-400 text-center leading-relaxed">
-                Scan safely, study smarter. Access all your essentials from one secure dashboard.
+              <p className="text-[10px] text-gray-400 text-RIGHT leading-relaxed">
+               Where Knowledge Meets Innovation Creating Opportunities, Building Futures
               </p>
             </div>
           </div>

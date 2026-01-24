@@ -112,7 +112,7 @@ export default function App() {
               )}
             </button>
             <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-              <span className="text-3xl text-white">🛡️</span>
+              <img src="/logo uptm 1.png" alt="Campus Shield Logo" className="w-full h-full object-cover rounded-2xl" />
             </div>
             <div>
               <h1 className="text-4xl font-light text-gray-900 dark:text-white mb-2">
@@ -170,8 +170,8 @@ export default function App() {
           <div className="flex items-center justify-center gap-2 mb-2">
             <span className="text-sm">Powered by</span>
             <div className="flex items-center gap-1">
-              <div className="w-5 h-5 bg-gradient-to-r from-blue-500 to-purple-500 rounded"></div>
-              <span className="text-sm font-medium">Google Gemini AI</span>
+              <img src="/logo uptm 1.png" alt="UPTM Logo" className="w-15 h-10 rounded-md" />
+              <span className="text-sm font-medium">UPTM Campus Shield</span>
             </div>
           </div>
           <p className="text-xs">
