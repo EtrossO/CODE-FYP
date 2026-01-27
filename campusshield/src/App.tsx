@@ -157,11 +157,11 @@ export default function App() {
 
         {/* Navigation */}
         <nav className="flex justify-center mb-8">
-          <div className="bg-white dark:bg-gray-800 p-1 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 w-full max-w-md sm:max-w-none">
+          <div className="bg-white dark:bg-gray-800 p-1 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 w-full max-w-md">
             <div className="flex gap-1">
               <button
                 onClick={() => setActiveTab('scanner')}
-                className={`flex-1 sm:flex-none px-4 sm:px-8 py-3 rounded-lg font-medium transition-all duration-200 text-sm sm:text-base ${
+                className={`flex-1 px-4 sm:px-8 py-3 rounded-lg font-medium transition-all duration-200 text-sm sm:text-base ${
                   activeTab === 'scanner'
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -171,7 +171,7 @@ export default function App() {
               </button>
               <button
                 onClick={() => setActiveTab('history')}
-                className={`flex-1 sm:flex-none px-4 sm:px-8 py-3 rounded-lg font-medium transition-all duration-200 text-sm sm:text-base ${
+                className={`flex-1 px-4 sm:px-8 py-3 rounded-lg font-medium transition-all duration-200 text-sm sm:text-base ${
                   activeTab === 'history'
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
