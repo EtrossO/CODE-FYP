@@ -122,7 +122,7 @@ export default function App() {
             </div>
           </div>
           <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">
-            Advanced AI-powered URL safety scanner. Protect yourself from phishing, malware, and suspicious links with cutting-edge technology.
+            AI-powered URL scanner blocking phishing, malware, and dangerous links instantly.
           </p>
         </header>
 
