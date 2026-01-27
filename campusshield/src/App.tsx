@@ -85,48 +85,34 @@ export default function App() {
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <header className="text-center mb-12 relative">
-          <div className="flex items-center justify-center gap-4 mb-6 relative">
-            {/* Mobile: Stack buttons above content */}
-            <div className="flex gap-3 mb-4 sm:hidden">
-              <button
-                onClick={() => setIsSidebarOpen(true)}
-                className="p-3 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-xl shadow-lg transition-colors duration-200"
-                title="Open UPTM Resources"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-              <button
-                onClick={toggleTheme}
-                className="p-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl shadow-lg transition-colors duration-200"
-                title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-              >
-                {isDarkMode ? (
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                ) : (
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                  </svg>
-                )}
-              </button>
-            </div>
-
-            {/* Desktop: Buttons positioned with gaps */}
+          <div className="flex items-center justify-between sm:justify-center gap-4 mb-6 relative">
+            {/* Mobile: Horizontal alignment with buttons */}
+            <div className="sm:hidden flex items-center justify-between w-full">
             <button
               onClick={() => setIsSidebarOpen(true)}
-              className="hidden sm:block absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-xl shadow-lg transition-colors duration-200"
+              className="p-3 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-xl shadow-lg transition-colors duration-200"
               title="Open UPTM Resources"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
+            {/* Logo and Title - centered */}
+            <div className="flex items-center gap-4 flex-1 justify-center">
+              <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <img src="/logo uptm 1.png" alt="Campus Shield Logo" className="w-full h-full object-cover rounded-2xl" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-light text-gray-900 dark:text-white mb-2">
+                  Campus Shield
+                </h1>
+                <div className="h-1 w-24 bg-blue-600 rounded-full mx-auto"></div>
+              </div>
+            </div>
+            {/* Theme button aligned to the right */}
             <button
               onClick={toggleTheme}
-              className="hidden sm:block absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl shadow-lg transition-colors duration-200"
+              className="p-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl shadow-lg transition-colors duration-200"
               title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
             >
               {isDarkMode ? (
@@ -139,6 +125,7 @@ export default function App() {
                 </svg>
               )}
             </button>
+            </div>
 
             <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
               <img src="/logo uptm 1.png" alt="Campus Shield Logo" className="w-full h-full object-cover rounded-2xl" />
