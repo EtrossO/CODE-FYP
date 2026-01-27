@@ -140,17 +140,17 @@ export default function App() {
               )}
             </button>
 
-            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
               <img src="/logo uptm 1.png" alt="Campus Shield Logo" className="w-full h-full object-cover rounded-2xl" />
             </div>
             <div>
-              <h1 className="text-4xl font-light text-gray-900 dark:text-white mb-2">
+              <h1 className="text-2xl sm:text-4xl font-light text-gray-900 dark:text-white mb-2">
                 Campus Shield
               </h1>
               <div className="h-1 w-24 bg-blue-600 rounded-full mx-auto"></div>
             </div>
           </div>
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed px-4">
+          <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed px-4">
             AI-powered URL scanner blocking phishing, malware, and dangerous links instantly.
           </p>
         </header>
