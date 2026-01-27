@@ -85,20 +85,48 @@ export default function App() {
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <header className="text-center mb-12 relative">
-          <div className="flex items-center justify-center gap-4 mb-6">
+          <div className="flex items-center justify-center gap-4 mb-6 relative">
+            {/* Mobile: Stack buttons above content */}
+            <div className="flex gap-3 mb-4 sm:hidden">
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="p-3 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-xl shadow-lg transition-colors duration-200"
+                title="Open UPTM Resources"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              <button
+                onClick={toggleTheme}
+                className="p-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl shadow-lg transition-colors duration-200"
+                title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              >
+                {isDarkMode ? (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                ) : (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  </svg>
+                )}
+              </button>
+            </div>
+
+            {/* Desktop: Buttons positioned with gaps */}
             <button
               onClick={() => setIsSidebarOpen(true)}
-              className="absolute left-0 top-1/2 -translate-y-1/2 p-3 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-xl shadow-lg transition-colors duration-200"
+              className="hidden sm:block absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-xl shadow-lg transition-colors duration-200"
               title="Open UPTM Resources"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            {/* Theme Toggle Button */}
             <button
               onClick={toggleTheme}
-              className="absolute right-0 top-1/2 -translate-y-1/2 p-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl shadow-lg transition-colors duration-200"
+              className="hidden sm:block absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl shadow-lg transition-colors duration-200"
               title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
             >
               {isDarkMode ? (
@@ -111,6 +139,7 @@ export default function App() {
                 </svg>
               )}
             </button>
+
             <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
               <img src="/logo uptm 1.png" alt="Campus Shield Logo" className="w-full h-full object-cover rounded-2xl" />
             </div>
@@ -121,18 +150,18 @@ export default function App() {
               <div className="h-1 w-24 bg-blue-600 rounded-full mx-auto"></div>
             </div>
           </div>
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed px-4">
             AI-powered URL scanner blocking phishing, malware, and dangerous links instantly.
           </p>
         </header>
 
         {/* Navigation */}
         <nav className="flex justify-center mb-8">
-          <div className="bg-white dark:bg-gray-800 p-1 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 p-1 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 w-full max-w-md sm:max-w-none">
             <div className="flex gap-1">
               <button
                 onClick={() => setActiveTab('scanner')}
-                className={`px-8 py-3 rounded-lg font-medium transition-all duration-200 ${
+                className={`flex-1 sm:flex-none px-4 sm:px-8 py-3 rounded-lg font-medium transition-all duration-200 text-sm sm:text-base ${
                   activeTab === 'scanner'
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -142,7 +171,7 @@ export default function App() {
               </button>
               <button
                 onClick={() => setActiveTab('history')}
-                className={`px-8 py-3 rounded-lg font-medium transition-all duration-200 ${
+                className={`flex-1 sm:flex-none px-4 sm:px-8 py-3 rounded-lg font-medium transition-all duration-200 text-sm sm:text-base ${
                   activeTab === 'history'
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -156,7 +185,7 @@ export default function App() {
 
         {/* Main Content */}
         <main className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="p-8">
+          <div className="p-4 sm:p-8">
             {activeTab === 'scanner' ? (
               <ScannerTab onCheck={handleCheck} isLoading={isLoading} />
             ) : (
@@ -166,11 +195,11 @@ export default function App() {
         </main>
 
         {/* Footer */}
-        <footer className="text-center mt-16 text-gray-500 dark:text-gray-400">
-          <div className="flex items-center justify-center gap-2 mb-2">
+        <footer className="text-center mt-16 text-gray-500 dark:text-gray-400 px-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 mb-2">
             <span className="text-sm">Powered by</span>
             <div className="flex items-center gap-1">
-              <img src="/logo uptm 1.png" alt="UPTM Logo" className="w-15 h-10 rounded-md" />
+              <img src="/logo uptm 1.png" alt="UPTM Logo" className="w-12 h-8 sm:w-15 sm:h-10 rounded-md" />
               <span className="text-sm font-medium">UPTM Campus Shield</span>
             </div>
           </div>

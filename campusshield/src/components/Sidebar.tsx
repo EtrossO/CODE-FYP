@@ -88,11 +88,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
       {/* Sidebar Panel */}
       <aside
-        className={`fixed left-0 top-0 h-full w-80 bg-gradient-to-b from-gray-900 via-gray-900 to-gray-800 border-r border-gray-700 z-[80] shadow-2xl transition-transform duration-300 ease-out transform ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        className={`fixed left-0 top-0 h-full w-full sm:w-80 bg-gradient-to-b from-gray-900 via-gray-900 to-gray-800 border-r border-gray-700 z-[80] shadow-2xl transition-transform duration-300 ease-out transform ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="p-6 border-b border-gray-700/50 flex justify-between items-center bg-gradient-to-r from-cyan-600/10 to-blue-600/10">
+          <div className="p-4 sm:p-6 border-b border-gray-700/50 flex justify-between items-center bg-gradient-to-r from-cyan-600/10 to-blue-600/10">
             <div>
               <h2 className="text-2xl font-black text-white bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
                 UPTM
@@ -110,7 +110,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
+          <nav className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-6 custom-scrollbar">
             {categories.map((category) => {
               const categoryLinks = UPTM_LINKS.filter(link => link.category === category);
               return (
@@ -147,7 +147,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           </nav>
 
           {/* Footer */}
-          <div className="p-6 border-t border-gray-700/50 bg-gradient-to-r from-gray-800/50 to-gray-900/50">
+          <div className="p-4 sm:p-6 border-t border-gray-700/50 bg-gradient-to-r from-gray-800/50 to-gray-900/50">
             <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 rounded-2xl p-4 border border-cyan-500/20">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 flex items-center justify-center">
