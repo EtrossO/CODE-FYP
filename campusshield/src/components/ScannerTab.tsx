@@ -179,6 +179,7 @@ function ResultCard({ result }: { result: ScanResult }) {
 // ─── QR Scanner Section ───────────────────────────────────────────────────────
 function QrScannerSection({
   isCameraActive,
+  isVideoReady,
   videoRef,
   canvasRef,
   onStartCamera,
@@ -186,6 +187,7 @@ function QrScannerSection({
   onFileUpload,
 }: {
   isCameraActive: boolean;
+  isVideoReady: boolean;
   videoRef: React.RefObject<HTMLVideoElement | null>;
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   onStartCamera: () => void;
@@ -214,6 +216,16 @@ function QrScannerSection({
             playsInline
           />
           <canvas ref={canvasRef} className="hidden" />
+
+          {/* Loading overlay - show until video is ready */}
+          {!isVideoReady && (
+            <div className="absolute inset-0 bg-gray-900/80 flex items-center justify-center pointer-events-none">
+              <div className="text-center">
+                <div className="w-12 h-12 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                <p className="text-white text-sm font-medium">Initializing camera...</p>
+              </div>
+            </div>
+          )}
 
           {/* Dark vignette to make corners pop */}
           <div
@@ -465,12 +477,14 @@ function CameraErrorBanner({ error, onDismiss }: { error: CameraError; onDismiss
 const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
   const [urlInput, setUrlInput] = useState('');
   const [isCameraActive, setIsCameraActive] = useState(false);
+  const [isVideoReady, setIsVideoReady] = useState(false);
   const [currentResult, setCurrentResult] = useState<ScanResult | null>(null);
   const [cameraError, setCameraError] = useState<CameraError | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const requestRef = useRef<number | undefined>(undefined);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const handlePaste = async () => {
     try {
@@ -483,6 +497,7 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
 
   const startCamera = async () => {
     setCameraError(null);
+    setIsVideoReady(false);
 
     // Camera API requires a secure context (https or localhost)
     if (!window.isSecureContext) {
@@ -500,11 +515,26 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment' },
       });
+      streamRef.current = stream;
+      
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.setAttribute('playsinline', 'true');
-        videoRef.current.play();
-        setIsCameraActive(true);
+        
+        // Wait for video to be ready before setting camera active
+        const playPromise = videoRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setIsVideoReady(true);
+              setIsCameraActive(true);
+            })
+            .catch((err) => {
+              console.error('Video play error:', err);
+              setCameraError({ type: 'unknown', message: 'Failed to play video stream' });
+              stopCamera();
+            });
+        }
       }
     } catch (err) {
       const name = (err as Error).name;
@@ -519,10 +549,15 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
   };
 
   const stopCamera = () => {
-    if (videoRef.current?.srcObject) {
-      (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
-      setIsCameraActive(false);
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
     }
+    if (videoRef.current?.srcObject) {
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraActive(false);
+    setIsVideoReady(false);
     if (requestRef.current) cancelAnimationFrame(requestRef.current);
   };
 
@@ -550,10 +585,19 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
   };
 
   useEffect(() => {
-    if (isCameraActive) requestRef.current = requestAnimationFrame(tick);
+    if (isCameraActive && isVideoReady) {
+      requestRef.current = requestAnimationFrame(tick);
+    }
     return () => { if (requestRef.current) cancelAnimationFrame(requestRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCameraActive]);
+  }, [isCameraActive, isVideoReady]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -667,6 +711,7 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
       )}
       <QrScannerSection
         isCameraActive={isCameraActive}
+        isVideoReady={isVideoReady}
         videoRef={videoRef}
         canvasRef={canvasRef}
         onStartCamera={startCamera}
