@@ -111,6 +111,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-6 custom-scrollbar">
+            <style>{`
+              .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+              .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+              .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+              .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+              @media (max-width: 640px) { .custom-scrollbar { -webkit-overflow-scrolling: touch; } }
+            `}</style>
             {categories.map((category) => {
               const categoryLinks = UPTM_LINKS.filter(link => link.category === category);
               return (
@@ -160,7 +167,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                   <p className="text-[10px] text-gray-500">Secure • Fast • Reliable</p>
                 </div>
               </div>
-              <p className="text-[10px] text-gray-400 text-RIGHT leading-relaxed">
+               <p className="text-[10px] text-gray-400 text-right leading-relaxed">
                Where Knowledge Meets Innovation Creating Opportunities, Building Futures
               </p>
             </div>

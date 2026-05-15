@@ -84,7 +84,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ history, onClear, onSelect }) =
                 <div
                   key={item.id}
                   onClick={() => onSelect(item)}
-                  className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md hover:border-blue-300 cursor-pointer transition-all"
+                  className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500 cursor-pointer transition-all"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
@@ -95,21 +95,21 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ history, onClear, onSelect }) =
                           'bg-red-500'
                         }`}></div>
                         <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                          item.status === SafetyStatusValues.SAFE ? 'bg-green-100 text-green-800' :
-                          item.status === SafetyStatusValues.SUSPICIOUS ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
+                          item.status === SafetyStatusValues.SAFE ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' :
+                          item.status === SafetyStatusValues.SUSPICIOUS ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300' :
+                          'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
                         }`}>
                           {item.status}
                         </span>
                       </div>
-                      <p className="text-sm font-medium text-gray-900 truncate mb-1">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate mb-1">
                         {item.url}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         {new Date(item.timestamp).toLocaleString()}
                       </p>
                       {item.reason && (
-                        <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                        <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 line-clamp-2">
                           {item.reason}
                         </p>
                       )}

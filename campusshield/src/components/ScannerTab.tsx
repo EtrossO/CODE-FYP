@@ -8,7 +8,7 @@ interface ScannerTabProps {
   isLoading: boolean;
 }
 
-// ─── Status theme helpers ────────────────────────────────────────────────────
+// Status theme configuration
 const STATUS_THEME = {
   [SafetyStatusValues.SAFE]: {
     icon: '✅',
@@ -48,7 +48,7 @@ const STATUS_THEME = {
   },
 };
 
-// ─── SVG Icons ───────────────────────────────────────────────────────────────
+// SVG Icons
 const IconShield = () => (
   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
@@ -73,7 +73,7 @@ const IconDanger = () => (
 const IconCamera = () => (
   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0118.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
   </svg>
 );
@@ -85,7 +85,6 @@ const IconUpload = () => (
   </svg>
 );
 
-// ─── Result icon by status ────────────────────────────────────────────────────
 function StatusIcon({ status }: { status: ScanResult['status'] }) {
   const t = STATUS_THEME[status] ?? STATUS_THEME[SafetyStatusValues.SUSPICIOUS];
   return (
@@ -102,33 +101,23 @@ function StatusIcon({ status }: { status: ScanResult['status'] }) {
   );
 }
 
-// ─── Result Card ─────────────────────────────────────────────────────────────
 function ResultCard({ result }: { result: ScanResult }) {
   const t = STATUS_THEME[result.status] ?? STATUS_THEME[SafetyStatusValues.SUSPICIOUS];
   return (
     <div className={`rounded-xl border-2 p-5 shadow-sm transition-all ${t.card}`}>
-      {/* Header row */}
       <div className="flex items-start gap-4">
         <StatusIcon status={result.status} />
-
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-2">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-              {t.label}
-            </h3>
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t.label}</h3>
             <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${t.badge}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${t.dot}`} />
               {result.status}
             </span>
           </div>
-
-          {/* URL */}
-          <p className="text-xs font-mono text-gray-500 dark:text-gray-400 break-all mb-3
-                        bg-gray-100 dark:bg-gray-700/60 rounded-lg px-3 py-1.5">
+          <p className="text-xs font-mono text-gray-500 dark:text-gray-400 break-all mb-3 bg-gray-100 dark:bg-gray-700/60 rounded-lg px-3 py-1.5">
             {result.url}
           </p>
-
-          {/* Details grid */}
           <div className="space-y-2 text-sm">
             {result.reason && (
               <div className="flex gap-2">
@@ -151,8 +140,6 @@ function ResultCard({ result }: { result: ScanResult }) {
           </div>
         </div>
       </div>
-
-      {/* Footer */}
       <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-600 flex items-center justify-between">
         <span className="text-xs text-gray-400 dark:text-gray-500">
           Analyzed on {new Date(result.timestamp).toLocaleString()}
@@ -176,237 +163,23 @@ function ResultCard({ result }: { result: ScanResult }) {
   );
 }
 
-// ─── QR Scanner Section ───────────────────────────────────────────────────────
-function QrScannerSection({
-  isCameraActive,
-  isVideoReady,
-  videoRef,
-  canvasRef,
-  onStartCamera,
-  onStopCamera,
-  onFileUpload,
-}: {
-  isCameraActive: boolean;
-  isVideoReady: boolean;
-  videoRef: React.RefObject<HTMLVideoElement | null>;
-  canvasRef: React.RefObject<HTMLCanvasElement | null>;
-  onStartCamera: () => void;
-  onStopCamera: () => void;
-  onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
-}) {
-  return (
-    <div className="space-y-4">
-      <div className="text-center">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Scan QR Code</h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          Use your camera or upload an image containing a QR code
-        </p>
-      </div>
-
-      {isCameraActive ? (
-        /* ── Live camera view ── */
-        <div
-          className="relative rounded-xl overflow-hidden border-2 border-blue-500 shadow-lg bg-black"
-          style={{ aspectRatio: '1 / 1', minHeight: '280px' }}
-        >
-          {/* Video stream - critical attributes for cross-device support */}
-          <video
-            ref={videoRef}
-            className="absolute inset-0 w-full h-full object-cover"
-            playsInline
-            autoPlay
-            muted
-            controls={false}
-            style={{ 
-              WebkitTransform: 'scaleX(-1)',
-              transform: 'scaleX(-1)',
-              WebkitUserSelect: 'none',
-              userSelect: 'none'
-            }}
-          />
-          <canvas ref={canvasRef} className="hidden" />
-
-          {/* Loading overlay - show until video is ready */}
-          {!isVideoReady && (
-            <div className="absolute inset-0 bg-black/80 flex items-center justify-center pointer-events-none z-10">
-              <div className="text-center">
-                <div className="w-12 h-12 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                <p className="text-white text-sm font-medium">Initializing camera...</p>
-              </div>
-            </div>
-          )}
-
-          {/* Dark vignette to make corners pop */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{ background: 'radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.55) 100%)' }}
-          />
-
-          {/* Overlay frame — uses % sizing so it scales on all screen sizes */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-            <div className="relative" style={{ width: '65%', aspectRatio: '1 / 1' }}>
-
-              {/* Corner brackets */}
-              {([
-                { pos: 'top-0 left-0',     borders: 'borderTop borderLeft',   radius: 'borderTopLeftRadius' },
-                { pos: 'top-0 right-0',    borders: 'borderTop borderRight',  radius: 'borderTopRightRadius' },
-                { pos: 'bottom-0 left-0',  borders: 'borderBottom borderLeft', radius: 'borderBottomLeftRadius' },
-                { pos: 'bottom-0 right-0', borders: 'borderBottom borderRight', radius: 'borderBottomRightRadius' },
-              ] as const).map(({ pos }, i) => (
-                <div
-                  key={i}
-                  className={`absolute ${pos}`}
-                  style={{
-                    width: 28, height: 28,
-                    borderColor: '#60a5fa',
-                    borderStyle: 'solid',
-                    borderWidth: 0,
-                    ...(i === 0 && { borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: 6 }),
-                    ...(i === 1 && { borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: 6 }),
-                    ...(i === 2 && { borderBottomWidth: 3, borderLeftWidth: 3, borderBottomLeftRadius: 6 }),
-                    ...(i === 3 && { borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: 6 }),
-                  }}
-                />
-              ))}
-
-              {/* Sweeping scan line */}
-              <style>{`
-                @keyframes qr-sweep {
-                  0%   { top: 8%; opacity: 1; }
-                  48%  { top: 90%; opacity: 1; }
-                  50%  { top: 90%; opacity: 0; }
-                  52%  { top: 8%; opacity: 0; }
-                  100% { top: 8%; opacity: 1; }
-                }
-              `}</style>
-              <div
-                className="absolute inset-x-0"
-                style={{
-                  height: 2,
-                  background: 'linear-gradient(90deg, transparent, #60a5fa, #93c5fd, #60a5fa, transparent)',
-                  boxShadow: '0 0 6px 1px rgba(96,165,250,0.6)',
-                  animation: 'qr-sweep 2s ease-in-out infinite',
-                  top: '8%',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Close button */}
-          <button
-            onClick={onStopCamera}
-            className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full shadow-lg transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-
-          <div className="absolute bottom-0 inset-x-0 py-3 text-center"
-               style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.65), transparent)' }}>
-            <p className="text-xs text-white/90 font-medium tracking-wide">
-              Point camera at QR code
-            </p>
-          </div>
-        </div>
-      ) : (
-        /* ── Scan option cards ── */
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Camera button */}
-          <button
-            onClick={onStartCamera}
-            className="group flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-dashed
-                       border-gray-300 dark:border-gray-600
-                       hover:border-blue-500 dark:hover:border-blue-400
-                       hover:bg-blue-50 dark:hover:bg-blue-900/20
-                       transition-all duration-200"
-          >
-            <div className="w-14 h-14 rounded-2xl bg-blue-100 dark:bg-blue-900/40
-                            group-hover:bg-blue-200 dark:group-hover:bg-blue-800/50
-                            flex items-center justify-center transition-colors">
-              <span className="text-blue-600 dark:text-blue-400"><IconCamera /></span>
-            </div>
-            <div className="text-center">
-              <p className="font-semibold text-gray-900 dark:text-white text-sm">Camera Scan</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Use device camera</p>
-            </div>
-          </button>
-
-          {/* Upload button */}
-          <div className="relative">
-            <input
-              type="file"
-              id="qr-upload"
-              accept="image/*"
-              onChange={onFileUpload}
-              className="hidden"
-            />
-            <button
-              onClick={() => document.getElementById('qr-upload')?.click()}
-              className="group w-full flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-dashed
-                         border-gray-300 dark:border-gray-600
-                         hover:border-blue-500 dark:hover:border-blue-400
-                         hover:bg-blue-50 dark:hover:bg-blue-900/20
-                         transition-all duration-200"
-            >
-              <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-700
-                              group-hover:bg-gray-200 dark:group-hover:bg-gray-600
-                              flex items-center justify-center transition-colors">
-                <span className="text-gray-600 dark:text-gray-300"><IconUpload /></span>
-              </div>
-              <div className="text-center">
-                <p className="font-semibold text-gray-900 dark:text-white text-sm">Upload Image</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Select from gallery</p>
-              </div>
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Camera error banner ─────────────────────────────────────────────────────
-type CameraError =
-  | { type: 'insecure' }
-  | { type: 'permission' }
-  | { type: 'unavailable' }
-  | { type: 'unknown'; message: string };
+type CameraError = { type: 'insecure' } | { type: 'permission' } | { type: 'unavailable' } | { type: 'unknown'; message: string };
 
 function CameraErrorBanner({ error, onDismiss }: { error: CameraError; onDismiss: () => void }) {
-  const isLocal =
-    window.location.hostname === 'localhost' ||
-    window.location.hostname === '127.0.0.1';
-
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   const content: Record<CameraError['type'], { title: string; body: React.ReactNode }> = {
     insecure: {
       title: 'Camera blocked — insecure connection',
       body: (
         <>
           <p className="mb-2">
-            Browsers only allow camera access on <strong>https://</strong> or{' '}
-            <strong>localhost</strong>. You are currently on{' '}
-            <code className="bg-orange-100 dark:bg-orange-900/40 px-1 rounded text-xs">
-              {window.location.origin}
-            </code>
-            .
+            Browsers only allow camera access on <strong>https://</strong> or <strong>localhost</strong>. You are currently on{' '}
+            <code className="bg-orange-100 dark:bg-orange-900/40 px-1 rounded text-xs">{window.location.origin}</code>.
           </p>
-          <p className="font-semibold">Fix options:</p>
           <ul className="list-disc list-inside space-y-1 mt-1 text-xs">
-            <li>
-              Run Vite with HTTPS:{' '}
-              <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
-                vite --https
-              </code>
-            </li>
-            <li>
-              Open the app on the same machine via{' '}
-              <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
-                http://localhost:5173
-              </code>{' '}
-              instead of the network IP
-            </li>
-            <li>Use the "Upload Image" option below to scan a QR code from a file</li>
+            <li>Run Vite with HTTPS: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">vite --https</code></li>
+            <li>Or open via <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">http://localhost:5173</code></li>
+            <li>Or use "Upload Image" to scan from a file</li>
           </ul>
         </>
       ),
@@ -415,34 +188,24 @@ function CameraErrorBanner({ error, onDismiss }: { error: CameraError; onDismiss
       title: 'Camera permission denied',
       body: (
         <>
-          <p className="mb-2">Your browser blocked camera access. To fix this:</p>
+          <p className="mb-2">Your browser blocked camera access. To fix:</p>
           <ul className="list-disc list-inside space-y-1 text-xs">
-            <li>
-              Click the <strong>camera / lock icon</strong> in your browser's address bar
-            </li>
-            <li>Set Camera to <strong>Allow</strong>, then reload the page</li>
-            <li>Or use "Upload Image" to scan a saved QR code image instead</li>
+            <li>Click the <strong>camera / lock icon</strong> in your browser's address bar</li>
+            <li>Set Camera to <strong>Allow</strong> and reload the page</li>
+            <li>Or use "Upload Image" to scan from a file</li>
           </ul>
         </>
       ),
     },
     unavailable: {
       title: 'No camera detected',
-      body: (
-        <p>
-          No camera device was found on this device. Use the{' '}
-          <strong>Upload Image</strong> option to scan a QR code from a file instead.
-        </p>
-      ),
+      body: <p>No camera device found. Use the <strong>Upload Image</strong> option instead.</p>,
     },
     unknown: {
       title: 'Camera could not be started',
       body: (
         <p>
-          Unexpected error:{' '}
-          <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">
-            {(error as { type: 'unknown'; message: string }).message}
-          </code>
+          Error: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">{(error as { type: 'unknown'; message: string }).message}</code>
           . Try using "Upload Image" instead.
         </p>
       ),
@@ -450,15 +213,9 @@ function CameraErrorBanner({ error, onDismiss }: { error: CameraError; onDismiss
   };
 
   const { title, body } = content[error.type];
-
   return (
-    <div className="rounded-xl border-2 border-orange-300 dark:border-orange-600
-                    bg-orange-50 dark:bg-orange-900/20 p-4 text-sm
-                    text-orange-800 dark:text-orange-200 relative">
-      <button
-        onClick={onDismiss}
-        className="absolute top-3 right-3 text-orange-400 hover:text-orange-600 transition-colors"
-      >
+    <div className="rounded-xl border-2 border-orange-300 dark:border-orange-600 bg-orange-50 dark:bg-orange-900/20 p-4 text-sm text-orange-800 dark:text-orange-200 relative">
+      <button onClick={onDismiss} className="absolute top-3 right-3 text-orange-400 hover:text-orange-600 transition-colors">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
@@ -473,7 +230,7 @@ function CameraErrorBanner({ error, onDismiss }: { error: CameraError; onDismiss
           <div className="text-orange-700 dark:text-orange-300 leading-relaxed">{body}</div>
           {!isLocal && error.type !== 'insecure' && (
             <p className="mt-2 text-xs text-orange-600 dark:text-orange-400">
-              Tip: open on <strong>localhost</strong> for easiest camera access during development.
+              Tip: open on <strong>localhost</strong> for easiest camera access.
             </p>
           )}
         </div>
@@ -482,7 +239,6 @@ function CameraErrorBanner({ error, onDismiss }: { error: CameraError; onDismiss
   );
 }
 
-// ─── Main ScannerTab ──────────────────────────────────────────────────────────
 const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
   const [urlInput, setUrlInput] = useState('');
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -494,6 +250,7 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const requestRef = useRef<number | undefined>(undefined);
   const streamRef = useRef<MediaStream | null>(null);
+  const isProcessingRef = useRef(false);
 
   const handlePaste = async () => {
     try {
@@ -504,19 +261,36 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
     }
   };
 
-  const startCamera = async () => {
+  const stopCamera = useCallback(() => {
+    console.log('⏹️ Stopping camera...');
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => {
+        track.stop();
+      });
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraActive(false);
+    setIsVideoReady(false);
+    isProcessingRef.current = false;
+    if (requestRef.current) {
+      cancelAnimationFrame(requestRef.current);
+    }
+  }, []);
+
+  const startCamera = useCallback(async () => {
     console.log('📱 Starting camera...');
     setCameraError(null);
     setIsVideoReady(false);
 
-    // Camera API requires a secure context (https or localhost)
     if (!window.isSecureContext) {
-      console.warn('❌ Not secure context - https or localhost required');
+      console.warn('❌ Not secure context');
       setCameraError({ type: 'insecure' });
       return;
     }
 
-    // navigator.mediaDevices is undefined on insecure origins too
     if (!navigator.mediaDevices?.getUserMedia) {
       console.warn('❌ getUserMedia not available');
       setCameraError({ type: 'unavailable' });
@@ -526,147 +300,115 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
     try {
       console.log('🔐 Requesting camera permission...');
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
+        video: {
           facingMode: 'environment',
           width: { ideal: 1280 },
           height: { ideal: 720 }
         },
       });
-      
-      console.log('✅ Camera stream obtained, tracks:', stream.getTracks().length);
+
+      console.log('✅ Stream obtained');
       streamRef.current = stream;
-      
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.setAttribute('playsinline', 'true');
-        videoRef.current.setAttribute('autoplay', 'true');
-        videoRef.current.setAttribute('muted', 'true');
         videoRef.current.muted = true;
-        
-        // With autoplay, the video should start automatically
-        // But we'll also call play() for extra safety
-        const playPromise = videoRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              console.log('▶️ Video playing successfully');
-              // Small delay to ensure video is really rendering
-              setTimeout(() => {
-                setIsVideoReady(true);
-                setIsCameraActive(true);
-              }, 300);
-            })
-            .catch((err) => {
-              console.error('❌ Video play error:', err);
-              setCameraError({ type: 'unknown', message: 'Failed to play video stream: ' + err.message });
-              stopCamera();
-            });
-        } else {
-          // For browsers that don't return a promise, set ready immediately
-          setTimeout(() => {
-            setIsVideoReady(true);
-            setIsCameraActive(true);
-          }, 300);
+
+        videoRef.current.onloadeddata = () => {
+          console.log('▶️ Video data loaded');
+          setIsVideoReady(true);
+          setIsCameraActive(true);
+        };
+
+        try {
+          await videoRef.current.play();
+        } catch (err) {
+          console.error('❌ Play failed:', err);
+          setCameraError({ type: 'unknown', message: 'Failed to play stream' });
+          stopCamera();
         }
       }
     } catch (err) {
       const error = err as Error;
-      console.error('❌ Camera error:', error.name, error.message);
-      const name = error.name;
-      if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+      console.error('❌ Camera error:', error.name);
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
         setCameraError({ type: 'permission' });
-      } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
         setCameraError({ type: 'unavailable' });
       } else {
         setCameraError({ type: 'unknown', message: error.message });
       }
     }
-  };
-
-  const stopCamera = () => {
-    console.log('⏹️ Stopping camera...');
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => {
-        t.stop();
-        console.log('🛑 Stopped track:', t.kind);
-      });
-      streamRef.current = null;
-    }
-    if (videoRef.current?.srcObject) {
-      videoRef.current.srcObject = null;
-    }
-    setIsCameraActive(false);
-    setIsVideoReady(false);
-    if (requestRef.current) cancelAnimationFrame(requestRef.current);
-  };
+  }, [stopCamera]);
 
   const tick = useCallback(() => {
+    if (isProcessingRef.current) {
+      requestRef.current = requestAnimationFrame(() => tick());
+      return;
+    }
+
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    
+
     if (!video || !canvas) {
       requestRef.current = requestAnimationFrame(() => tick());
       return;
     }
 
-    // Check if video has data - use a more lenient check
-    if (video.readyState >= video.HAVE_CURRENT_DATA) {
-      try {
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          requestRef.current = requestAnimationFrame(() => tick());
-          return;
-        }
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+      requestRef.current = requestAnimationFrame(() => tick());
+      return;
+    }
 
-        // Set canvas to match video dimensions
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-
-        // Draw current video frame
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-        // Try to detect QR code with both inversion attempts
-        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: 'attemptBoth',
-        });
-
-        if (code?.data) {
-          console.log('✅ QR code detected:', code.data);
-          stopCamera();
-          handleCheckUrl(code.data);
-          return;
-        }
-      } catch (err) {
-        console.error('❌ Error during QR scanning:', err);
+    try {
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        requestRef.current = requestAnimationFrame(() => tick());
+        return;
       }
-    } else {
-      console.debug('⏳ Video not ready yet, readyState:', video.readyState);
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0);
+
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
+
+      if (code?.data) {
+        console.log('✅ QR detected:', code.data);
+        isProcessingRef.current = true;
+        stopCamera();
+        handleCheckUrl(code.data);
+        return;
+      }
+    } catch (err) {
+      console.error('Error scanning:', err);
     }
 
     requestRef.current = requestAnimationFrame(() => tick());
-  }, []);
+  }, [stopCamera]);
 
   useEffect(() => {
     if (isCameraActive && isVideoReady) {
-      console.log('🎥 Starting QR scan animation frame');
+      console.log('🎥 Starting scan loop');
       requestRef.current = requestAnimationFrame(() => tick());
     }
-    return () => { 
-      if (requestRef.current) cancelAnimationFrame(requestRef.current); 
+    return () => {
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
     };
   }, [isCameraActive, isVideoReady, tick]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       stopCamera();
     };
-  }, []);
+  }, [stopCamera]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     const reader = new FileReader();
     reader.onload = (event) => {
       const img = new Image();
@@ -682,7 +424,7 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
           if (code) {
             handleCheckUrl(code.data);
           } else {
-            alert('No QR code found in this image.');
+            alert('No QR code found in image');
           }
         }
       };
@@ -699,13 +441,10 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
-      {/* ── URL Input ── */}
       <div className="space-y-4">
         <div className="text-center">
           <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-1">URL Safety Scanner</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Enter a URL to analyze for potential security threats
-          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Enter a URL to analyze for potential security threats</p>
         </div>
 
         <div className="relative">
@@ -715,10 +454,7 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
             onChange={(e) => setUrlInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && urlInput.trim() && !isLoading) handleCheckUrl(urlInput.trim()); }}
             placeholder="https://example.com"
-            className="w-full pl-4 pr-12 py-3 rounded-xl border border-gray-300 dark:border-gray-600
-                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                       placeholder-gray-400 dark:placeholder-gray-500
-                       focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+            className="w-full pl-4 pr-12 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
           />
           <button
             onClick={handlePaste}
@@ -735,11 +471,7 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
         <button
           onClick={() => { if (urlInput.trim()) handleCheckUrl(urlInput.trim()); }}
           disabled={isLoading || !urlInput.trim()}
-          className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-xl font-semibold
-                     bg-blue-600 hover:bg-blue-700 text-white
-                     disabled:bg-gray-200 dark:disabled:bg-gray-700
-                     disabled:text-gray-400 dark:disabled:text-gray-500
-                     disabled:cursor-not-allowed transition-colors"
+          className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-xl font-semibold bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 dark:disabled:text-gray-500 disabled:cursor-not-allowed transition-colors"
         >
           {isLoading ? (
             <>
@@ -749,8 +481,7 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
           ) : (
             <>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               Analyze URL
             </>
@@ -758,7 +489,6 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
         </button>
       </div>
 
-      {/* ── Divider ── */}
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-gray-200 dark:border-gray-700" />
@@ -770,21 +500,132 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
         </div>
       </div>
 
-      {/* ── QR Scanner ── */}
-      {cameraError && (
-        <CameraErrorBanner error={cameraError} onDismiss={() => setCameraError(null)} />
-      )}
-      <QrScannerSection
-        isCameraActive={isCameraActive}
-        isVideoReady={isVideoReady}
-        videoRef={videoRef}
-        canvasRef={canvasRef}
-        onStartCamera={startCamera}
-        onStopCamera={stopCamera}
-        onFileUpload={handleFileUpload}
-      />
+      {cameraError && <CameraErrorBanner error={cameraError} onDismiss={() => setCameraError(null)} />}
 
-      {/* ── Result Card ── */}
+      <div className="space-y-4">
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Scan QR Code</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Use your camera or upload an image</p>
+        </div>
+
+        {isCameraActive ? (
+          <div
+            className="relative rounded-xl overflow-hidden border-2 border-blue-500 shadow-lg bg-black"
+            style={{ aspectRatio: '1 / 1', minHeight: '280px' }}
+          >
+            <video
+              ref={videoRef}
+              className="absolute inset-0 w-full h-full object-cover"
+              playsInline
+              muted
+              style={{ transform: 'scaleX(-1)' }}
+            />
+            <canvas ref={canvasRef} className="hidden" />
+
+            {!isVideoReady && (
+              <div className="absolute inset-0 bg-black/80 flex items-center justify-center pointer-events-none z-10">
+                <div className="text-center">
+                  <div className="w-12 h-12 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                  <p className="text-white text-sm font-medium">Initializing camera...</p>
+                </div>
+              </div>
+            )}
+
+            <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.55) 100%)' }} />
+
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+              <div className="relative" style={{ width: '65%', aspectRatio: '1 / 1' }}>
+                {[
+                  { pos: 'top-0 left-0', i: 0 },
+                  { pos: 'top-0 right-0', i: 1 },
+                  { pos: 'bottom-0 left-0', i: 2 },
+                  { pos: 'bottom-0 right-0', i: 3 },
+                ].map(({ pos, i }) => (
+                  <div
+                    key={i}
+                    className={`absolute ${pos}`}
+                    style={{
+                      width: 28, height: 28,
+                      borderColor: '#60a5fa',
+                      borderStyle: 'solid',
+                      borderWidth: 0,
+                      ...(i === 0 && { borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: 6 }),
+                      ...(i === 1 && { borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: 6 }),
+                      ...(i === 2 && { borderBottomWidth: 3, borderLeftWidth: 3, borderBottomLeftRadius: 6 }),
+                      ...(i === 3 && { borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: 6 }),
+                    }}
+                  />
+                ))}
+
+                <style>{`@keyframes qr-sweep { 0% { top: 8%; opacity: 1; } 48% { top: 90%; opacity: 1; } 50% { top: 90%; opacity: 0; } 52% { top: 8%; opacity: 0; } 100% { top: 8%; opacity: 1; } }`}</style>
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: '0 0 auto 0',
+                    height: 2,
+                    background: 'linear-gradient(90deg, transparent, #60a5fa, #93c5fd, #60a5fa, transparent)',
+                    boxShadow: '0 0 6px 1px rgba(96,165,250,0.6)',
+                    animation: 'qr-sweep 2s ease-in-out infinite',
+                    top: '8%',
+                  }}
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={() => stopCamera()}
+              className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full shadow-lg transition-colors z-30"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <div className="absolute bottom-0 inset-x-0 py-3 text-center z-20"
+              style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.65), transparent)' }}>
+              <p className="text-xs text-white/90 font-medium tracking-wide">Point camera at QR code</p>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <button
+              onClick={startCamera}
+              className="group flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-blue-100 dark:bg-blue-900/40 group-hover:bg-blue-200 dark:group-hover:bg-blue-800/50 flex items-center justify-center transition-colors">
+                <span className="text-blue-600 dark:text-blue-400"><IconCamera /></span>
+              </div>
+              <div className="text-center">
+                <p className="font-semibold text-gray-900 dark:text-white text-sm">Camera Scan</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Use device camera</p>
+              </div>
+            </button>
+
+            <div className="relative">
+              <input
+                type="file"
+                id="qr-upload"
+                accept="image/*"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <button
+                onClick={() => document.getElementById('qr-upload')?.click()}
+                className="group w-full flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200"
+              >
+                <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-700 group-hover:bg-gray-200 dark:group-hover:bg-gray-600 flex items-center justify-center transition-colors">
+                  <span className="text-gray-600 dark:text-gray-300"><IconUpload /></span>
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-gray-900 dark:text-white text-sm">Upload Image</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Select from gallery</p>
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {isLoading && !currentResult && (
         <div className="rounded-xl border-2 border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 p-6 flex items-center gap-4">
           <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
