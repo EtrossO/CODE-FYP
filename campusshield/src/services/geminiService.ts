@@ -6,6 +6,10 @@ if (!apiKey) {
   console.warn("VITE_API_KEY environment variable is not set.");
 }
 
+const masked = apiKey ? apiKey.slice(0, 6) + '...' + apiKey.slice(-4) : 'none';
+console.log('🔑 Gemini API key loaded:', masked);
+console.log('🤖 Gemini package version: 0.24.x');
+
 const ai = new GoogleGenerativeAI(apiKey || "");
 
 const SUSPICIOUS_TLDS = new Set([
@@ -139,7 +143,9 @@ export const analyzeLinkSafety = async (url: string): Promise<{
   }
 
   try {
-    const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const modelName = 'gemini-2.0-flash';
+    console.log('🤖 Calling Gemini model:', modelName, 'for URL:', url);
+    const model = ai.getGenerativeModel({ model: modelName });
 
     const prompt = `You are a cybersecurity expert. Analyze this URL for safety threats such as phishing, malware, scams, or suspicious behavior: ${url}
 
@@ -154,6 +160,7 @@ Respond ONLY with a raw JSON object (no markdown, no code fences). Use this exac
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const raw = response.text();
+    console.log('✅ Gemini raw response:', raw.slice(0, 300));
 
     const cleaned = raw
       .replace(/```json\s*/gi, "")
@@ -161,6 +168,7 @@ Respond ONLY with a raw JSON object (no markdown, no code fences). Use this exac
       .trim();
 
     const data = JSON.parse(cleaned);
+    console.log('✅ Gemini parsed result:', data);
 
     const validStatuses = [
       SafetyStatusValues.SAFE,
@@ -187,7 +195,13 @@ Respond ONLY with a raw JSON object (no markdown, no code fences). Use this exac
       description: data.description || 'No description available.',
     };
   } catch (error) {
-    console.error("Gemini Analysis Error:", error);
+    console.error("❌ Gemini Analysis Error:", error);
+    if (error instanceof Error) {
+      console.error('   Name:', error.name);
+      console.error('   Message:', error.message);
+      if ('status' in error) console.error('   Status:', (error as any).status);
+      if ('statusText' in error) console.error('   StatusText:', (error as any).statusText);
+    }
     return {
       status: pre.status ?? SafetyStatusValues.SUSPICIOUS,
       reason: pre.reason || 'Analysis failed. Please proceed with extreme caution.',
