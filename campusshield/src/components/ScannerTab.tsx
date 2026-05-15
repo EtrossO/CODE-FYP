@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import jsQR from 'jsqr';
 import type { ScanResult } from '../types';
@@ -9,20 +8,308 @@ interface ScannerTabProps {
   isLoading: boolean;
 }
 
+// ─── Status theme helpers ────────────────────────────────────────────────────
+const STATUS_THEME = {
+  [SafetyStatusValues.SAFE]: {
+    icon: '✅',
+    label: 'Safe URL',
+    badge: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+    card: 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20',
+    dot: 'bg-green-500',
+    iconBg: 'bg-green-100 dark:bg-green-900/40',
+    iconColor: 'text-green-600 dark:text-green-400',
+  },
+  [SafetyStatusValues.SUSPICIOUS]: {
+    icon: '⚠️',
+    label: 'Suspicious URL',
+    badge: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
+    card: 'border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20',
+    dot: 'bg-yellow-500',
+    iconBg: 'bg-yellow-100 dark:bg-yellow-900/40',
+    iconColor: 'text-yellow-600 dark:text-yellow-400',
+  },
+  [SafetyStatusValues.UNSAFE]: {
+    icon: '🚫',
+    label: 'Unsafe URL',
+    badge: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+    card: 'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20',
+    dot: 'bg-red-500',
+    iconBg: 'bg-red-100 dark:bg-red-900/40',
+    iconColor: 'text-red-600 dark:text-red-400',
+  },
+  [SafetyStatusValues.LOADING]: {
+    icon: '⏳',
+    label: 'Analyzing…',
+    badge: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+    card: 'border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20',
+    dot: 'bg-blue-500',
+    iconBg: 'bg-blue-100 dark:bg-blue-900/40',
+    iconColor: 'text-blue-600 dark:text-blue-400',
+  },
+};
+
+// ─── SVG Icons ───────────────────────────────────────────────────────────────
+const IconShield = () => (
+  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+  </svg>
+);
+
+const IconWarning = () => (
+  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+  </svg>
+);
+
+const IconDanger = () => (
+  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+
+const IconCamera = () => (
+  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>
+);
+
+const IconUpload = () => (
+  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+  </svg>
+);
+
+// ─── Result icon by status ────────────────────────────────────────────────────
+function StatusIcon({ status }: { status: ScanResult['status'] }) {
+  const t = STATUS_THEME[status] ?? STATUS_THEME[SafetyStatusValues.SUSPICIOUS];
+  return (
+    <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${t.iconBg}`}>
+      <span className={t.iconColor}>
+        {status === SafetyStatusValues.SAFE && <IconShield />}
+        {status === SafetyStatusValues.SUSPICIOUS && <IconWarning />}
+        {status === SafetyStatusValues.UNSAFE && <IconDanger />}
+        {status === SafetyStatusValues.LOADING && (
+          <div className="w-6 h-6 border-2 border-current border-t-transparent rounded-full animate-spin" />
+        )}
+      </span>
+    </div>
+  );
+}
+
+// ─── Result Card ─────────────────────────────────────────────────────────────
+function ResultCard({ result }: { result: ScanResult }) {
+  const t = STATUS_THEME[result.status] ?? STATUS_THEME[SafetyStatusValues.SUSPICIOUS];
+  return (
+    <div className={`rounded-xl border-2 p-5 shadow-sm transition-all ${t.card}`}>
+      {/* Header row */}
+      <div className="flex items-start gap-4">
+        <StatusIcon status={result.status} />
+
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+              {t.label}
+            </h3>
+            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${t.badge}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${t.dot}`} />
+              {result.status}
+            </span>
+          </div>
+
+          {/* URL */}
+          <p className="text-xs font-mono text-gray-500 dark:text-gray-400 break-all mb-3
+                        bg-gray-100 dark:bg-gray-700/60 rounded-lg px-3 py-1.5">
+            {result.url}
+          </p>
+
+          {/* Details grid */}
+          <div className="space-y-2 text-sm">
+            {result.reason && (
+              <div className="flex gap-2">
+                <span className="font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">Analysis:</span>
+                <span className="text-gray-600 dark:text-gray-400">{result.reason}</span>
+              </div>
+            )}
+            {result.title && (
+              <div className="flex gap-2">
+                <span className="font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">Title:</span>
+                <span className="text-gray-600 dark:text-gray-400">{result.title}</span>
+              </div>
+            )}
+            {result.description && (
+              <div className="flex gap-2">
+                <span className="font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">Description:</span>
+                <span className="text-gray-600 dark:text-gray-400">{result.description}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-600 flex items-center justify-between">
+        <span className="text-xs text-gray-400 dark:text-gray-500">
+          Analyzed on {new Date(result.timestamp).toLocaleString()}
+        </span>
+        {result.status !== SafetyStatusValues.UNSAFE && (
+          <a
+            href={result.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+          >
+            Visit site
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── QR Scanner Section ───────────────────────────────────────────────────────
+function QrScannerSection({
+  isCameraActive,
+  videoRef,
+  canvasRef,
+  onStartCamera,
+  onStopCamera,
+  onFileUpload,
+}: {
+  isCameraActive: boolean;
+  videoRef: React.RefObject<HTMLVideoElement | null>;
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+  onStartCamera: () => void;
+  onStopCamera: () => void;
+  onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="text-center">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Scan QR Code</h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Use your camera or upload an image containing a QR code
+        </p>
+      </div>
+
+      {isCameraActive ? (
+        /* ── Live camera view ── */
+        <div className="relative rounded-xl overflow-hidden border-2 border-blue-500 shadow-lg bg-gray-900">
+          <video ref={videoRef} className="w-full aspect-square object-cover" />
+          <canvas ref={canvasRef} className="hidden" />
+
+          {/* Overlay frame */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="relative w-52 h-52">
+              {/* Corner marks */}
+              {[
+                'top-0 left-0 border-t-4 border-l-4 rounded-tl-lg',
+                'top-0 right-0 border-t-4 border-r-4 rounded-tr-lg',
+                'bottom-0 left-0 border-b-4 border-l-4 rounded-bl-lg',
+                'bottom-0 right-0 border-b-4 border-r-4 rounded-br-lg',
+              ].map((cls, i) => (
+                <div key={i} className={`absolute w-8 h-8 border-white ${cls}`} />
+              ))}
+              {/* Scanning line */}
+              <div className="absolute inset-x-0 h-0.5 bg-blue-400/80 top-1/2 animate-pulse" />
+            </div>
+          </div>
+
+          {/* Close button */}
+          <button
+            onClick={onStopCamera}
+            className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full shadow-lg transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent py-3 text-center">
+            <p className="text-xs text-white/80">Position QR code within the frame</p>
+          </div>
+        </div>
+      ) : (
+        /* ── Scan option cards ── */
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Camera button */}
+          <button
+            onClick={onStartCamera}
+            className="group flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-dashed
+                       border-gray-300 dark:border-gray-600
+                       hover:border-blue-500 dark:hover:border-blue-400
+                       hover:bg-blue-50 dark:hover:bg-blue-900/20
+                       transition-all duration-200"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-blue-100 dark:bg-blue-900/40
+                            group-hover:bg-blue-200 dark:group-hover:bg-blue-800/50
+                            flex items-center justify-center transition-colors">
+              <span className="text-blue-600 dark:text-blue-400"><IconCamera /></span>
+            </div>
+            <div className="text-center">
+              <p className="font-semibold text-gray-900 dark:text-white text-sm">Camera Scan</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Use device camera</p>
+            </div>
+          </button>
+
+          {/* Upload button */}
+          <div className="relative">
+            <input
+              type="file"
+              id="qr-upload"
+              accept="image/*"
+              onChange={onFileUpload}
+              className="hidden"
+            />
+            <button
+              onClick={() => document.getElementById('qr-upload')?.click()}
+              className="group w-full flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-dashed
+                         border-gray-300 dark:border-gray-600
+                         hover:border-blue-500 dark:hover:border-blue-400
+                         hover:bg-blue-50 dark:hover:bg-blue-900/20
+                         transition-all duration-200"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-700
+                              group-hover:bg-gray-200 dark:group-hover:bg-gray-600
+                              flex items-center justify-center transition-colors">
+                <span className="text-gray-600 dark:text-gray-300"><IconUpload /></span>
+              </div>
+              <div className="text-center">
+                <p className="font-semibold text-gray-900 dark:text-white text-sm">Upload Image</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Select from gallery</p>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main ScannerTab ──────────────────────────────────────────────────────────
 const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
   const [urlInput, setUrlInput] = useState('');
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [currentResult, setCurrentResult] = useState<ScanResult | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  // Fixed: Added undefined as initial value to satisfy TypeScript's 1-argument requirement for generic useRef
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const requestRef = useRef<number | undefined>(undefined);
 
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
       setUrlInput(text);
-    } catch (err) {
+    } catch {
       console.error('Failed to read clipboard');
     }
   };
@@ -32,43 +319,40 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.setAttribute("playsinline", "true");
+        videoRef.current.setAttribute('playsinline', 'true');
         videoRef.current.play();
         setIsCameraActive(true);
       }
-    } catch (err) {
-      alert("Camera permission denied or not available.");
+    } catch {
+      alert('Camera permission denied or not available.');
     }
   };
 
   const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-      tracks.forEach(track => track.stop());
+    if (videoRef.current?.srcObject) {
+      (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
       setIsCameraActive(false);
     }
     if (requestRef.current) cancelAnimationFrame(requestRef.current);
   };
 
   const tick = () => {
-    if (videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
-      const canvas = canvasRef.current;
-      const video = videoRef.current;
-      if (canvas) {
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          canvas.height = video.videoHeight;
-          canvas.width = video.videoWidth;
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const code = jsQR(imageData.data, imageData.width, imageData.height, {
-            inversionAttempts: "dontInvert",
-          });
-          if (code) {
-            stopCamera();
-            onCheck(code.data);
-            return;
-          }
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (video && video.readyState === video.HAVE_ENOUGH_DATA && canvas) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'dontInvert',
+        });
+        if (code) {
+          stopCamera();
+          handleCheckUrl(code.data);
+          return;
         }
       }
     }
@@ -76,18 +360,14 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
   };
 
   useEffect(() => {
-    if (isCameraActive) {
-      requestRef.current = requestAnimationFrame(tick);
-    }
-    return () => {
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
-    };
+    if (isCameraActive) requestRef.current = requestAnimationFrame(tick);
+    return () => { if (requestRef.current) cancelAnimationFrame(requestRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCameraActive]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (event) => {
       const img = new Image();
@@ -101,9 +381,9 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
           const code = jsQR(imageData.data, imageData.width, imageData.height);
           if (code) {
-            onCheck(code.data);
+            handleCheckUrl(code.data);
           } else {
-            alert("No QR code found in this image.");
+            alert('No QR code found in this image.');
           }
         }
       };
@@ -112,219 +392,107 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
     reader.readAsDataURL(file);
   };
 
+  const handleCheckUrl = async (url: string) => {
+    setCurrentResult(null);
+    const result = await onCheck(url);
+    setCurrentResult(result);
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-8">
-      {/* URL Input Section */}
+      {/* ── URL Input ── */}
       <div className="space-y-4">
         <div className="text-center">
-          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">URL Safety Scanner</h2>
-          <p className="text-gray-600 dark:text-gray-400">Enter a URL to analyze for potential security threats</p>
+          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-1">URL Safety Scanner</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Enter a URL to analyze for potential security threats
+          </p>
         </div>
 
-        <div className="space-y-4">
-          <div className="relative">
-            <input
-              type="url"
-              value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              placeholder="https://example.com"
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700"
-            />
-            <button
-              onClick={handlePaste}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-              title="Paste from clipboard"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            </button>
-          </div>
-
+        <div className="relative">
+          <input
+            type="url"
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && urlInput.trim() && !isLoading) handleCheckUrl(urlInput.trim()); }}
+            placeholder="https://example.com"
+            className="w-full pl-4 pr-12 py-3 rounded-xl border border-gray-300 dark:border-gray-600
+                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                       placeholder-gray-400 dark:placeholder-gray-500
+                       focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+          />
           <button
-            onClick={async () => {
-              if (urlInput.trim()) {
-                const result = await onCheck(urlInput);
-                setCurrentResult(result);
-              }
-            }}
-            disabled={isLoading || !urlInput}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+            onClick={handlePaste}
+            title="Paste from clipboard"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500 transition-colors"
           >
-            {isLoading ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Analyzing URL...
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Analyze URL
-              </>
-            )}
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
           </button>
         </div>
+
+        <button
+          onClick={() => { if (urlInput.trim()) handleCheckUrl(urlInput.trim()); }}
+          disabled={isLoading || !urlInput.trim()}
+          className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-xl font-semibold
+                     bg-blue-600 hover:bg-blue-700 text-white
+                     disabled:bg-gray-200 dark:disabled:bg-gray-700
+                     disabled:text-gray-400 dark:disabled:text-gray-500
+                     disabled:cursor-not-allowed transition-colors"
+        >
+          {isLoading ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Analyzing URL…
+            </>
+          ) : (
+            <>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Analyze URL
+            </>
+          )}
+        </button>
       </div>
 
-      {/* Divider */}
+      {/* ── Divider ── */}
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-200 dark:border-gray-700"></div>
+          <div className="w-full border-t border-gray-200 dark:border-gray-700" />
         </div>
-        <div className="relative flex justify-center text-sm">
-          <span className="px-4 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 font-medium">or</span>
+        <div className="relative flex justify-center">
+          <span className="px-4 bg-white dark:bg-gray-800 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+            or scan a QR code
+          </span>
         </div>
       </div>
 
-      {/* QR Scanner Section */}
-      <div className="space-y-4">
-        <div className="text-center">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Scan QR Code</h3>
-          <p className="text-gray-600 dark:text-gray-400">Use your camera or upload an image containing a QR code</p>
-        </div>
+      {/* ── QR Scanner ── */}
+      <QrScannerSection
+        isCameraActive={isCameraActive}
+        videoRef={videoRef}
+        canvasRef={canvasRef}
+        onStartCamera={startCamera}
+        onStopCamera={stopCamera}
+        onFileUpload={handleFileUpload}
+      />
 
-        {isCameraActive ? (
-          <div className="relative">
-            <div className="aspect-square bg-gray-900 rounded-lg overflow-hidden border-2 border-blue-500 shadow-lg">
-              <video ref={videoRef} className="w-full h-full object-cover" />
-              <canvas ref={canvasRef} className="hidden" />
-              <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border-2 border-dashed border-white opacity-70 rounded-lg"></div>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-0.5 bg-white opacity-50"></div>
-              </div>
-            </div>
-            <button
-              onClick={stopCamera}
-              className="absolute top-4 right-4 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full shadow-lg transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            <div className="mt-4 text-center">
-              <p className="text-sm text-gray-600">Position QR code within the frame</p>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <button
-              onClick={startCamera}
-              className="flex items-center justify-center gap-3 p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors group"
-            >
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center group-hover:bg-blue-700 transition-colors">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </div>
-              <div className="text-left">
-                <div className="font-medium text-gray-900">Camera Scan</div>
-                <div className="text-sm text-gray-600">Use device camera</div>
-              </div>
-            </button>
-
-            <div className="relative">
-              <input
-                type="file"
-                id="qr-upload"
-                accept="image/*"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-              <button
-                onClick={() => document.getElementById('qr-upload')?.click()}
-                className="w-full flex items-center justify-center gap-3 p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors group"
-              >
-                <div className="w-8 h-8 bg-gray-600 rounded-lg flex items-center justify-center group-hover:bg-gray-700 transition-colors">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                  </svg>
-                </div>
-                <div className="text-left">
-                  <div className="font-medium text-gray-900">Upload Image</div>
-                  <div className="text-sm text-gray-600">Select from gallery</div>
-                </div>
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Analysis Result Display */}
-      {currentResult && (
-        <div className="mt-8">
-          <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-            <div className="flex items-start gap-4">
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-                currentResult.status === SafetyStatusValues.SAFE ? 'bg-green-100' :
-                currentResult.status === SafetyStatusValues.SUSPICIOUS ? 'bg-yellow-100' :
-                'bg-red-100'
-              }`}>
-                {currentResult.status === SafetyStatusValues.SAFE ? (
-                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                ) : currentResult.status === SafetyStatusValues.SUSPICIOUS ? (
-                  <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                ) : (
-                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                )}
-              </div>
-
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {currentResult.status === SafetyStatusValues.SAFE ? 'Safe URL' :
-                     currentResult.status === SafetyStatusValues.SUSPICIOUS ? 'Suspicious URL' :
-                     'Unsafe URL'}
-                  </h3>
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    currentResult.status === SafetyStatusValues.SAFE ? 'bg-green-100 text-green-800' :
-                    currentResult.status === SafetyStatusValues.SUSPICIOUS ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-red-100 text-red-800'
-                  }`}>
-                    {currentResult.status}
-                  </span>
-                </div>
-
-                <div className="text-sm text-gray-600 mb-3">
-                  <strong>URL:</strong> {currentResult.url}
-                </div>
-
-                {currentResult.reason && (
-                  <div className="text-sm text-gray-700 mb-3">
-                    <strong>Analysis:</strong> {currentResult.reason}
-                  </div>
-                )}
-
-                {currentResult.title && (
-                  <div className="text-sm text-gray-600 mb-2">
-                    <strong>Title:</strong> {currentResult.title}
-                  </div>
-                )}
-
-                {currentResult.description && (
-                  <div className="text-sm text-gray-600">
-                    <strong>Description:</strong> {currentResult.description}
-                  </div>
-                )}
-
-                <div className="mt-4 pt-3 border-t border-gray-200">
-                  <div className="text-xs text-gray-500">
-                    Analyzed on {new Date(currentResult.timestamp).toLocaleString()}
-                  </div>
-                </div>
-              </div>
-            </div>
+      {/* ── Result Card ── */}
+      {isLoading && !currentResult && (
+        <div className="rounded-xl border-2 border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 p-6 flex items-center gap-4">
+          <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+          <div>
+            <p className="font-semibold text-blue-700 dark:text-blue-300">Analyzing URL…</p>
+            <p className="text-sm text-blue-500 dark:text-blue-400">Checking for threats, please wait</p>
           </div>
         </div>
       )}
+
+      {currentResult && !isLoading && <ResultCard result={currentResult} />}
     </div>
   );
 };
