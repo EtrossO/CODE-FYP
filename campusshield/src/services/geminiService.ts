@@ -8,7 +8,6 @@ if (!apiKey) {
 
 const masked = apiKey ? apiKey.slice(0, 6) + '...' + apiKey.slice(-4) : 'none';
 console.log('🔑 Gemini API key loaded:', masked);
-console.log('🤖 Gemini package version: 0.24.x');
 
 const ai = new GoogleGenerativeAI(apiKey || "");
 
@@ -31,6 +30,41 @@ const SUSPICIOUS_KEYWORDS = [
   'suspended', 'restrict', 'unlock', 'authenticate',
 ];
 
+const TRUSTED_DOMAINS = new Set([
+  'youtube.com', 'www.youtube.com', 'm.youtube.com',
+  'google.com', 'www.google.com', 'mail.google.com', 'drive.google.com',
+  'docs.google.com', 'maps.google.com', 'photos.google.com',
+  'facebook.com', 'www.facebook.com', 'm.facebook.com',
+  'twitter.com', 'www.twitter.com', 'x.com', 'www.x.com',
+  'instagram.com', 'www.instagram.com',
+  'linkedin.com', 'www.linkedin.com',
+  'whatsapp.com', 'www.whatsapp.com',
+  'amazon.com', 'www.amazon.com',
+  'apple.com', 'www.apple.com',
+  'microsoft.com', 'www.microsoft.com',
+  'github.com', 'www.github.com',
+  'stackoverflow.com', 'www.stackoverflow.com',
+  'wikipedia.org', 'www.wikipedia.org', 'en.wikipedia.org',
+  'netflix.com', 'www.netflix.com',
+  'spotify.com', 'www.spotify.com',
+  'telegram.org', 'www.telegram.org',
+  'discord.com', 'www.discord.com',
+  'reddit.com', 'www.reddit.com',
+  'zoom.us', 'www.zoom.us',
+  'canva.com', 'www.canva.com',
+  'figma.com', 'www.figma.com',
+  'npmjs.com', 'www.npmjs.com',
+  'react.dev', 'www.react.dev',
+  'uptm.edu.my', 'www.uptm.edu.my',
+  'kptm.edu.my', 'www.kptm.edu.my',
+  'lms.uptm.edu.my',
+  'mycms.kptm.edu.my',
+  'epay.kptm.edu.my',
+  'edupage.org', 'uptm.edupage.org',
+]);
+
+const resultCache = new Map<string, { status: SafetyStatus; reason: string; title: string; description: string }>();
+
 function countDots(s: string): number {
   return (s.match(/\./g) || []).length;
 }
@@ -50,6 +84,10 @@ function preCheck(url: string): PreCheckResult {
 
   const hostname = u.hostname.toLowerCase();
   const path = u.pathname + u.search;
+
+  if (TRUSTED_DOMAINS.has(hostname)) {
+    return { status: SafetyStatusValues.SAFE, reason: '' };
+  }
 
   if (!u.protocol.startsWith('https')) {
     return { status: SafetyStatusValues.SUSPICIOUS, reason: 'Connection is not encrypted (non-HTTPS). Sensitive data could be intercepted.' };
@@ -103,10 +141,10 @@ function preCheck(url: string): PreCheckResult {
     return { status: SafetyStatusValues.SUSPICIOUS, reason: 'Domain name contains encoded characters used to disguise the real website address.' };
   }
 
-  const httpsOnlyDomains = ['paypal.com', 'facebook.com', 'instagram.com', 'twitter.com', 'x.com',
+  const brandDomains = ['paypal.com', 'facebook.com', 'instagram.com', 'twitter.com', 'x.com',
     'linkedin.com', 'whatsapp.com', 'amazon.com', 'apple.com', 'microsoft.com',
     'google.com', 'gmail.com', 'netflix.com', 'bank', 'secure'];
-  const hasSpoof = httpsOnlyDomains.some(d => {
+  const hasSpoof = brandDomains.some(d => {
     if (d === 'bank') return hostname.includes('bank') && !hostname.endsWith('.bank');
     return hostname !== d && hostname.endsWith('.' + d);
   });
@@ -123,14 +161,33 @@ export const analyzeLinkSafety = async (url: string): Promise<{
   title: string;
   description: string;
 }> => {
+  const cached = resultCache.get(url);
+  if (cached) {
+    console.log('📦 Using cached result for:', url);
+    return cached;
+  }
+
   const pre = preCheck(url);
+  if (pre.status === SafetyStatusValues.SAFE) {
+    const result = {
+      status: SafetyStatusValues.SAFE,
+      reason: 'Known trusted domain.',
+      title: 'Verified Safe',
+      description: 'This URL belongs to a recognised reputable website.',
+    };
+    resultCache.set(url, result);
+    return result;
+  }
+
   if (pre.status === SafetyStatusValues.UNSAFE) {
-    return {
+    const result = {
       status: pre.status,
       reason: pre.reason,
       title: 'Blocked — Threat Detected',
       description: 'This URL was flagged by local safety heuristics as unsafe.',
     };
+    resultCache.set(url, result);
+    return result;
   }
 
   if (!apiKey) {
@@ -157,10 +214,9 @@ Respond ONLY with a raw JSON object (no markdown, no code fences). Use this exac
   "description": "brief description of the site or threat"
 }`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
+    const geminiResult = await model.generateContent(prompt);
+    const response = await geminiResult.response;
     const raw = response.text();
-    console.log('✅ Gemini raw response:', raw.slice(0, 300));
 
     const cleaned = raw
       .replace(/```json\s*/gi, "")
@@ -168,7 +224,6 @@ Respond ONLY with a raw JSON object (no markdown, no code fences). Use this exac
       .trim();
 
     const data = JSON.parse(cleaned);
-    console.log('✅ Gemini parsed result:', data);
 
     const validStatuses = [
       SafetyStatusValues.SAFE,
@@ -180,33 +235,40 @@ Respond ONLY with a raw JSON object (no markdown, no code fences). Use this exac
       : SafetyStatusValues.SUSPICIOUS;
 
     if (pre.status === SafetyStatusValues.SUSPICIOUS && status === SafetyStatusValues.SAFE) {
-      return {
+      const overrideResult = {
         status: SafetyStatusValues.SUSPICIOUS,
         reason: pre.reason,
         title: data.title || 'Proceed with Caution',
         description: data.description || 'Local heuristics flagged this URL. AI analysis was inconclusive.',
       };
+      resultCache.set(url, overrideResult);
+      return overrideResult;
     }
 
-    return {
+    const finalResult = {
       status,
       reason: data.reason || pre.reason || 'No reason provided.',
       title: data.title || 'Unknown Page',
       description: data.description || 'No description available.',
     };
+    resultCache.set(url, finalResult);
+    return finalResult;
   } catch (error) {
-    console.error("❌ Gemini Analysis Error:", error);
-    if (error instanceof Error) {
-      console.error('   Name:', error.name);
-      console.error('   Message:', error.message);
-      if ('status' in error) console.error('   Status:', (error as any).status);
-      if ('statusText' in error) console.error('   StatusText:', (error as any).statusText);
-    }
-    return {
+    const msg = error instanceof Error ? error.message : '';
+    const isQuota = msg.includes('429') || msg.includes('quota') || msg.includes('Quota');
+    console.error("❌ Gemini Analysis Error:", isQuota ? 'QUOTA_EXCEEDED' : msg);
+
+    const errorResult = {
       status: pre.status ?? SafetyStatusValues.SUSPICIOUS,
-      reason: pre.reason || 'Analysis failed. Please proceed with extreme caution.',
-      title: 'Error in analysis',
-      description: 'We couldn\'t verify this link safely.',
+      reason: pre.reason || (isQuota
+        ? 'AI analysis is currently unavailable due to API quota limits. Try again later.'
+        : 'Analysis failed. Please proceed with caution.'),
+      title: isQuota ? 'AI Unavailable' : 'Error in analysis',
+      description: isQuota
+        ? 'The Gemini API daily free quota has been reached. Results are based on local heuristics only. The quota resets daily.'
+        : 'We couldn\'t verify this link safely via AI.',
     };
+    resultCache.set(url, errorResult);
+    return errorResult;
   }
 };
