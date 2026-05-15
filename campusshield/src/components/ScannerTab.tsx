@@ -203,24 +203,71 @@ function QrScannerSection({
 
       {isCameraActive ? (
         /* ── Live camera view ── */
-        <div className="relative rounded-xl overflow-hidden border-2 border-blue-500 shadow-lg bg-gray-900">
-          <video ref={videoRef} className="w-full aspect-square object-cover" />
+        <div
+          className="relative rounded-xl overflow-hidden border-2 border-blue-500 shadow-lg bg-gray-900"
+          style={{ aspectRatio: '1 / 1', minHeight: '280px' }}
+        >
+          {/* aspectRatio on the CONTAINER (not video) ensures the overlay always has height */}
+          <video
+            ref={videoRef}
+            className="absolute inset-0 w-full h-full object-cover"
+            playsInline
+          />
           <canvas ref={canvasRef} className="hidden" />
 
-          {/* Overlay frame */}
+          {/* Dark vignette to make corners pop */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: 'radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.55) 100%)' }}
+          />
+
+          {/* Overlay frame — uses % sizing so it scales on all screen sizes */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="relative w-52 h-52">
-              {/* Corner marks */}
-              {[
-                'top-0 left-0 border-t-4 border-l-4 rounded-tl-lg',
-                'top-0 right-0 border-t-4 border-r-4 rounded-tr-lg',
-                'bottom-0 left-0 border-b-4 border-l-4 rounded-bl-lg',
-                'bottom-0 right-0 border-b-4 border-r-4 rounded-br-lg',
-              ].map((cls, i) => (
-                <div key={i} className={`absolute w-8 h-8 border-white ${cls}`} />
+            <div className="relative" style={{ width: '65%', aspectRatio: '1 / 1' }}>
+
+              {/* Corner brackets */}
+              {([
+                { pos: 'top-0 left-0',     borders: 'borderTop borderLeft',   radius: 'borderTopLeftRadius' },
+                { pos: 'top-0 right-0',    borders: 'borderTop borderRight',  radius: 'borderTopRightRadius' },
+                { pos: 'bottom-0 left-0',  borders: 'borderBottom borderLeft', radius: 'borderBottomLeftRadius' },
+                { pos: 'bottom-0 right-0', borders: 'borderBottom borderRight', radius: 'borderBottomRightRadius' },
+              ] as const).map(({ pos }, i) => (
+                <div
+                  key={i}
+                  className={`absolute ${pos}`}
+                  style={{
+                    width: 28, height: 28,
+                    borderColor: '#60a5fa',
+                    borderStyle: 'solid',
+                    borderWidth: 0,
+                    ...(i === 0 && { borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: 6 }),
+                    ...(i === 1 && { borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: 6 }),
+                    ...(i === 2 && { borderBottomWidth: 3, borderLeftWidth: 3, borderBottomLeftRadius: 6 }),
+                    ...(i === 3 && { borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: 6 }),
+                  }}
+                />
               ))}
-              {/* Scanning line */}
-              <div className="absolute inset-x-0 h-0.5 bg-blue-400/80 top-1/2 animate-pulse" />
+
+              {/* Sweeping scan line */}
+              <style>{`
+                @keyframes qr-sweep {
+                  0%   { top: 8%; opacity: 1; }
+                  48%  { top: 90%; opacity: 1; }
+                  50%  { top: 90%; opacity: 0; }
+                  52%  { top: 8%; opacity: 0; }
+                  100% { top: 8%; opacity: 1; }
+                }
+              `}</style>
+              <div
+                className="absolute inset-x-0"
+                style={{
+                  height: 2,
+                  background: 'linear-gradient(90deg, transparent, #60a5fa, #93c5fd, #60a5fa, transparent)',
+                  boxShadow: '0 0 6px 1px rgba(96,165,250,0.6)',
+                  animation: 'qr-sweep 2s ease-in-out infinite',
+                  top: '8%',
+                }}
+              />
             </div>
           </div>
 
@@ -234,8 +281,11 @@ function QrScannerSection({
             </svg>
           </button>
 
-          <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent py-3 text-center">
-            <p className="text-xs text-white/80">Position QR code within the frame</p>
+          <div className="absolute bottom-0 inset-x-0 py-3 text-center"
+               style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.65), transparent)' }}>
+            <p className="text-xs text-white/90 font-medium tracking-wide">
+              Point camera at QR code
+            </p>
           </div>
         </div>
       ) : (
@@ -295,11 +345,128 @@ function QrScannerSection({
   );
 }
 
+// ─── Camera error banner ─────────────────────────────────────────────────────
+type CameraError =
+  | { type: 'insecure' }
+  | { type: 'permission' }
+  | { type: 'unavailable' }
+  | { type: 'unknown'; message: string };
+
+function CameraErrorBanner({ error, onDismiss }: { error: CameraError; onDismiss: () => void }) {
+  const isLocal =
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1';
+
+  const content: Record<CameraError['type'], { title: string; body: React.ReactNode }> = {
+    insecure: {
+      title: 'Camera blocked — insecure connection',
+      body: (
+        <>
+          <p className="mb-2">
+            Browsers only allow camera access on <strong>https://</strong> or{' '}
+            <strong>localhost</strong>. You are currently on{' '}
+            <code className="bg-orange-100 dark:bg-orange-900/40 px-1 rounded text-xs">
+              {window.location.origin}
+            </code>
+            .
+          </p>
+          <p className="font-semibold">Fix options:</p>
+          <ul className="list-disc list-inside space-y-1 mt-1 text-xs">
+            <li>
+              Run Vite with HTTPS:{' '}
+              <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
+                vite --https
+              </code>
+            </li>
+            <li>
+              Open the app on the same machine via{' '}
+              <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
+                http://localhost:5173
+              </code>{' '}
+              instead of the network IP
+            </li>
+            <li>Use the "Upload Image" option below to scan a QR code from a file</li>
+          </ul>
+        </>
+      ),
+    },
+    permission: {
+      title: 'Camera permission denied',
+      body: (
+        <>
+          <p className="mb-2">Your browser blocked camera access. To fix this:</p>
+          <ul className="list-disc list-inside space-y-1 text-xs">
+            <li>
+              Click the <strong>camera / lock icon</strong> in your browser's address bar
+            </li>
+            <li>Set Camera to <strong>Allow</strong>, then reload the page</li>
+            <li>Or use "Upload Image" to scan a saved QR code image instead</li>
+          </ul>
+        </>
+      ),
+    },
+    unavailable: {
+      title: 'No camera detected',
+      body: (
+        <p>
+          No camera device was found on this device. Use the{' '}
+          <strong>Upload Image</strong> option to scan a QR code from a file instead.
+        </p>
+      ),
+    },
+    unknown: {
+      title: 'Camera could not be started',
+      body: (
+        <p>
+          Unexpected error:{' '}
+          <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">
+            {(error as { type: 'unknown'; message: string }).message}
+          </code>
+          . Try using "Upload Image" instead.
+        </p>
+      ),
+    },
+  };
+
+  const { title, body } = content[error.type];
+
+  return (
+    <div className="rounded-xl border-2 border-orange-300 dark:border-orange-600
+                    bg-orange-50 dark:bg-orange-900/20 p-4 text-sm
+                    text-orange-800 dark:text-orange-200 relative">
+      <button
+        onClick={onDismiss}
+        className="absolute top-3 right-3 text-orange-400 hover:text-orange-600 transition-colors"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+      <div className="flex gap-3">
+        <svg className="w-5 h-5 flex-shrink-0 mt-0.5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <div>
+          <p className="font-semibold mb-1">{title}</p>
+          <div className="text-orange-700 dark:text-orange-300 leading-relaxed">{body}</div>
+          {!isLocal && error.type !== 'insecure' && (
+            <p className="mt-2 text-xs text-orange-600 dark:text-orange-400">
+              Tip: open on <strong>localhost</strong> for easiest camera access during development.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main ScannerTab ──────────────────────────────────────────────────────────
 const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
   const [urlInput, setUrlInput] = useState('');
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [currentResult, setCurrentResult] = useState<ScanResult | null>(null);
+  const [cameraError, setCameraError] = useState<CameraError | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -315,16 +482,39 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
   };
 
   const startCamera = async () => {
+    setCameraError(null);
+
+    // Camera API requires a secure context (https or localhost)
+    if (!window.isSecureContext) {
+      setCameraError({ type: 'insecure' });
+      return;
+    }
+
+    // navigator.mediaDevices is undefined on insecure origins too
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError({ type: 'unavailable' });
+      return;
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+      });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.setAttribute('playsinline', 'true');
         videoRef.current.play();
         setIsCameraActive(true);
       }
-    } catch {
-      alert('Camera permission denied or not available.');
+    } catch (err) {
+      const name = (err as Error).name;
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+        setCameraError({ type: 'permission' });
+      } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+        setCameraError({ type: 'unavailable' });
+      } else {
+        setCameraError({ type: 'unknown', message: (err as Error).message });
+      }
     }
   };
 
@@ -472,6 +662,9 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
       </div>
 
       {/* ── QR Scanner ── */}
+      {cameraError && (
+        <CameraErrorBanner error={cameraError} onDismiss={() => setCameraError(null)} />
+      )}
       <QrScannerSection
         isCameraActive={isCameraActive}
         videoRef={videoRef}
