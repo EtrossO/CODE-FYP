@@ -251,6 +251,7 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
   const requestRef = useRef<number | undefined>(undefined);
   const streamRef = useRef<MediaStream | null>(null);
   const isProcessingRef = useRef(false);
+  const frameSkip = useRef(0);
 
   const handlePaste = async () => {
     try {
@@ -297,47 +298,58 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
       return;
     }
 
-    try {
-      console.log('🔐 Requesting camera permission...');
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        },
-      });
+    const constraints = [
+      { video: { facingMode: { exact: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } },
+      { video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } },
+      { video: { width: { ideal: 1280 }, height: { ideal: 720 } } },
+      { video: true },
+    ];
 
-      console.log('✅ Stream obtained');
-      streamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.setAttribute('playsinline', 'true');
-        videoRef.current.muted = true;
-
-        videoRef.current.onloadeddata = () => {
-          console.log('▶️ Video data loaded');
-          setIsVideoReady(true);
-          setIsCameraActive(true);
-        };
-
-        try {
-          await videoRef.current.play();
-        } catch (err) {
-          console.error('❌ Play failed:', err);
-          setCameraError({ type: 'unknown', message: 'Failed to play stream' });
-          stopCamera();
-        }
+    let stream: MediaStream | null = null;
+    for (const c of constraints) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(c);
+        console.log('✅ Stream obtained with:', JSON.stringify(c.video));
+        break;
+      } catch (e) {
+        console.warn('⏩ Camera constraint failed, trying next:', (e as Error).name);
       }
-    } catch (err) {
-      const error = err as Error;
-      console.error('❌ Camera error:', error.name);
-      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-        setCameraError({ type: 'permission' });
-      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
-        setCameraError({ type: 'unavailable' });
-      } else {
-        setCameraError({ type: 'unknown', message: error.message });
+    }
+
+    if (!stream) {
+      console.error('❌ All camera constraints failed');
+      setCameraError({ type: 'unavailable' });
+      return;
+    }
+
+    streamRef.current = stream;
+
+    const video = videoRef.current;
+    if (video) {
+      video.srcObject = stream;
+      video.setAttribute('playsinline', 'true');
+      video.muted = true;
+
+      const onReady = () => {
+        console.log('▶️ Video ready');
+        setIsVideoReady(true);
+        setIsCameraActive(true);
+      };
+
+      video.onloadeddata = onReady;
+      video.oncanplay = onReady;
+
+      if (video.readyState >= 2) {
+        onReady();
+        return;
+      }
+
+      try {
+        await video.play();
+      } catch (err) {
+        console.error('❌ Play failed:', err);
+        setCameraError({ type: 'unknown', message: 'Failed to play stream' });
+        stopCamera();
       }
     }
   }, [stopCamera]);
@@ -356,7 +368,13 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
       return;
     }
 
-    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+    if (video.readyState < video.HAVE_ENOUGH_DATA || video.videoWidth === 0) {
+      requestRef.current = requestAnimationFrame(() => tick());
+      return;
+    }
+
+    frameSkip.current = (frameSkip.current + 1) % 5;
+    if (frameSkip.current !== 0) {
       requestRef.current = requestAnimationFrame(() => tick());
       return;
     }
@@ -368,12 +386,16 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
         return;
       }
 
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      ctx.drawImage(video, 0, 0);
+      const scanSize = Math.min(video.videoWidth, video.videoHeight, 640);
+      canvas.width = scanSize;
+      canvas.height = scanSize;
 
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
+      const offsetX = (video.videoWidth - scanSize) / 2;
+      const offsetY = (video.videoHeight - scanSize) / 2;
+      ctx.drawImage(video, offsetX, offsetY, scanSize, scanSize, 0, 0, scanSize, scanSize);
+
+      const imageData = ctx.getImageData(0, 0, scanSize, scanSize);
+      const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
 
       if (code?.data) {
         console.log('✅ QR detected:', code.data);
@@ -431,6 +453,7 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
       img.src = event.target?.result as string;
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleCheckUrl = async (url: string) => {
@@ -518,7 +541,7 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
               className="absolute inset-0 w-full h-full object-cover"
               playsInline
               muted
-              style={{ transform: 'scaleX(-1)' }}
+              style={{ transform: '' }}
             />
             <canvas ref={canvasRef} className="hidden" />
 
