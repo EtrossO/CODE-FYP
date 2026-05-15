@@ -298,6 +298,8 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
       return;
     }
 
+    setIsCameraActive(true);
+
     const constraints = [
       { video: { facingMode: { exact: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } },
       { video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } },
@@ -318,6 +320,7 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
 
     if (!stream) {
       console.error('❌ All camera constraints failed');
+      setIsCameraActive(false);
       setCameraError({ type: 'unavailable' });
       return;
     }
@@ -333,7 +336,6 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
       const onReady = () => {
         console.log('▶️ Video ready');
         setIsVideoReady(true);
-        setIsCameraActive(true);
       };
 
       video.onloadeddata = onReady;
