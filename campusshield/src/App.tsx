@@ -5,6 +5,7 @@ import Sidebar from './components/Sidebar';
 import type { ScanResult } from './types';
 import { SafetyStatusValues } from './types';
 import { analyzeLinkSafety } from './services/geminiService';
+import { db } from './db/database';
 
 export default function App() {
   // Simple state for switching tabs
@@ -23,6 +24,11 @@ export default function App() {
       // Check system preference
       setIsDarkMode(window.matchMedia('(prefers-color-scheme: dark)').matches);
     }
+  }, []);
+
+  // Load scan history from IndexedDB on mount
+  useEffect(() => {
+    db.scanHistory.orderBy('timestamp').reverse().toArray().then(setHistory);
   }, []);
 
   // Apply theme to document
@@ -53,6 +59,7 @@ export default function App() {
         title: analysisResult.title,
         description: analysisResult.description,
       };
+      await db.scanHistory.add(result);
       setHistory(prev => [result, ...prev]);
       setIsLoading(false);
       return result;
@@ -65,13 +72,15 @@ export default function App() {
         timestamp: Date.now(),
         reason: 'Analysis failed. Please try again.',
       };
+      await db.scanHistory.add(result);
       setHistory(prev => [result, ...prev]);
       setIsLoading(false);
       return result;
     }
   };
 
-  const handleClearHistory = () => {
+  const handleClearHistory = async () => {
+    await db.scanHistory.clear();
     setHistory([]);
   };
 
