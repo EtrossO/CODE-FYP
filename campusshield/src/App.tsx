@@ -6,10 +6,11 @@ import type { ScanResult } from './types';
 import { SafetyStatusValues } from './types';
 import { analyzeLinkSafety } from './services/geminiService';
 import { db } from './db/database';
+import ThreatHeatmap from './components/ThreatHeatmap';
 
 export default function App() {
   // Simple state for switching tabs
-  const [activeTab, setActiveTab] = useState<'scanner' | 'history'>('scanner');
+  const [activeTab, setActiveTab] = useState<'scanner' | 'history' | 'heatmap'>('scanner');
   const [history, setHistory] = useState<ScanResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -183,7 +184,7 @@ export default function App() {
 
         {/* Navigation */}
         <nav className="flex justify-center mb-8">
-          <div className="bg-white dark:bg-gray-800 p-1 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 w-full max-w-md">
+          <div className="bg-white dark:bg-gray-800 p-1 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 w-full max-w-xl">
             <div className="flex gap-1">
               <button
                 onClick={() => setActiveTab('scanner')}
@@ -205,6 +206,16 @@ export default function App() {
               >
                 📋 History ({history.length})
               </button>
+              <button
+                onClick={() => setActiveTab('heatmap')}
+                className={`flex-1 px-4 sm:px-8 py-3 rounded-lg font-medium transition-all duration-200 text-sm sm:text-base ${
+                  activeTab === 'heatmap'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+              >
+                🔥 Heatmap
+              </button>
             </div>
           </div>
         </nav>
@@ -214,8 +225,10 @@ export default function App() {
           <div className="p-4 sm:p-8">
             {activeTab === 'scanner' ? (
               <ScannerTab onCheck={handleCheck} isLoading={isLoading} />
-            ) : (
+            ) : activeTab === 'history' ? (
               <HistoryTab history={history} onClear={handleClearHistory} onSelect={handleSelectResult} />
+            ) : (
+              <ThreatHeatmap />
             )}
           </div>
         </main>
