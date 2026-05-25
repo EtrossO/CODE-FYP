@@ -356,9 +356,17 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
     }
   }, [stopCamera]);
 
+  const handleCheckUrl = useCallback(async (url: string) => {
+    setCurrentResult(null);
+    const result = await onCheck(url);
+    setCurrentResult(result);
+  }, [onCheck]);
+
+  const tickRef = useRef<() => void>();
+
   const tick = useCallback(() => {
     if (isProcessingRef.current) {
-      requestRef.current = requestAnimationFrame(() => tick());
+      requestRef.current = requestAnimationFrame(tickRef.current!);
       return;
     }
 
@@ -366,25 +374,25 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
     const canvas = canvasRef.current;
 
     if (!video || !canvas) {
-      requestRef.current = requestAnimationFrame(() => tick());
+      requestRef.current = requestAnimationFrame(tickRef.current!);
       return;
     }
 
     if (video.readyState < video.HAVE_ENOUGH_DATA || video.videoWidth === 0) {
-      requestRef.current = requestAnimationFrame(() => tick());
+      requestRef.current = requestAnimationFrame(tickRef.current!);
       return;
     }
 
     frameSkip.current = (frameSkip.current + 1) % 5;
     if (frameSkip.current !== 0) {
-      requestRef.current = requestAnimationFrame(() => tick());
+      requestRef.current = requestAnimationFrame(tickRef.current!);
       return;
     }
 
     try {
       const ctx = canvas.getContext('2d');
       if (!ctx) {
-        requestRef.current = requestAnimationFrame(() => tick());
+        requestRef.current = requestAnimationFrame(tickRef.current!);
         return;
       }
 
@@ -410,8 +418,12 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
       console.error('Error scanning:', err);
     }
 
-    requestRef.current = requestAnimationFrame(() => tick());
-  }, [stopCamera]);
+    requestRef.current = requestAnimationFrame(tickRef.current!);
+  }, [stopCamera, handleCheckUrl]);
+
+  useEffect(() => {
+    tickRef.current = tick;
+  }, [tick]);
 
   useEffect(() => {
     if (isCameraActive && isVideoReady) {
@@ -456,12 +468,6 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
     };
     reader.readAsDataURL(file);
     e.target.value = '';
-  };
-
-  const handleCheckUrl = async (url: string) => {
-    setCurrentResult(null);
-    const result = await onCheck(url);
-    setCurrentResult(result);
   };
 
   return (

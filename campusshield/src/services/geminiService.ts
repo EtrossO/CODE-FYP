@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { SafetyStatusValues, type SafetyStatus } from "../types";
+import { checkUrlSafeBrowsing } from "./safeBrowsingService";
 
 const apiKey = import.meta.env.VITE_API_KEY;
 if (!apiKey) {
@@ -185,6 +186,18 @@ export const analyzeLinkSafety = async (url: string): Promise<{
       reason: pre.reason,
       title: 'Blocked — Threat Detected',
       description: 'This URL was flagged by local safety heuristics as unsafe.',
+    };
+    resultCache.set(url, result);
+    return result;
+  }
+
+  const sbResult = await checkUrlSafeBrowsing(url);
+  if (sbResult?.matched) {
+    const result = {
+      status: SafetyStatusValues.UNSAFE,
+      reason: sbResult.threatMessage!,
+      title: 'Blocked — Safe Browsing Match',
+      description: `Google Safe Browsing identified this URL as a known threat (${sbResult.threatType}). It has been blocked.`,
     };
     resultCache.set(url, result);
     return result;
