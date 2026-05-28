@@ -59,12 +59,12 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ history, onClear, onSelect }) =
 
       {/* Filter Tabs */}
       {history.length > 0 && (
-        <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
+        <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
           {(['ALL', SafetyStatusValues.SAFE, SafetyStatusValues.SUSPICIOUS, SafetyStatusValues.UNSAFE] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-all ${
+              className={`flex-1 py-2 px-1 sm:px-3 text-xs sm:text-sm font-medium rounded-md truncate ${
                 filter === f
                   ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
                   : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-600'
