@@ -362,7 +362,8 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
     setCurrentResult(result);
   }, [onCheck]);
 
-  const tickRef = useRef<() => void>();
+  const tickRef = useRef<(() => void) | null>(null);
+
 
   const tick = useCallback(() => {
     if (isProcessingRef.current) {
