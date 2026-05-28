@@ -11,10 +11,15 @@ interface HistoryTabProps {
 
 const HistoryTab: React.FC<HistoryTabProps> = ({ history, onClear, onSelect }) => {
   const [filter, setFilter] = useState<'ALL' | typeof SafetyStatusValues[keyof typeof SafetyStatusValues]>('ALL');
+  const [search, setSearch] = useState('');
 
   const filteredHistory = history.filter(item => {
-    if (filter === 'ALL') return true;
-    return item.status === filter;
+    if (filter !== 'ALL' && item.status !== filter) return false;
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return item.url.toLowerCase().includes(q)
+      || (item.reason && item.reason.toLowerCase().includes(q))
+      || (item.title && item.title.toLowerCase().includes(q));
   });
 
   return (
@@ -36,6 +41,20 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ history, onClear, onSelect }) =
             Clear All
           </button>
         )}
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by URL, reason, or title..."
+          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
+        />
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
       </div>
 
       {/* Filter Tabs */}
@@ -67,12 +86,12 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ history, onClear, onSelect }) =
               </svg>
             </div>
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-              {history.length === 0 ? 'No scans yet' : 'No matching results'}
+              {history.length === 0 ? 'No scans yet' : search ? 'No results match your search' : 'No matching results'}
             </h3>
             <p className="text-gray-600 dark:text-gray-400">
               {history.length === 0
                 ? 'Start by analyzing a URL to see your scan history here.'
-                : 'Try adjusting your filter to see more results.'
+                : 'Try adjusting your filter or search to see more results.'
               }
             </p>
           </div>

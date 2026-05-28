@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import ScannerTab from './components/ScannerTab';
 import HistoryTab from './components/HistoryTab';
 import Sidebar from './components/Sidebar';
+import ResultModal from './components/ResultModal';
 import type { ScanResult } from './types';
 import { SafetyStatusValues } from './types';
 import { analyzeLinkSafety } from './services/geminiService';
@@ -14,6 +15,7 @@ export default function App() {
   const [history, setHistory] = useState<ScanResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [selectedResult, setSelectedResult] = useState<ScanResult | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) return savedTheme === 'dark';
@@ -79,8 +81,11 @@ export default function App() {
   };
 
   const handleSelectResult = (result: ScanResult) => {
-    // TODO: Handle selecting a result
-    console.log('Selected result:', result);
+    setSelectedResult(result);
+  };
+
+  const handleCloseResultModal = () => {
+    setSelectedResult(null);
   };
 
   return (
@@ -243,6 +248,9 @@ export default function App() {
 
       {/* Sidebar */}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+
+      {/* Result Modal */}
+      <ResultModal result={selectedResult} onClose={handleCloseResultModal} />
     </div>
   );
 }
