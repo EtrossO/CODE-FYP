@@ -33,8 +33,10 @@ const SUSPICIOUS_KEYWORDS = [
 
 const TRUSTED_DOMAINS = new Set([
   'youtube.com', 'www.youtube.com', 'm.youtube.com',
-  'google.com', 'www.google.com', 'mail.google.com', 'drive.google.com',
-  'docs.google.com', 'maps.google.com', 'photos.google.com',
+  'google.com', 'goo.gl','www.google.com', 'mail.google.com', 'drive.google.com',
+  'docs.google.com', 'maps.google.com', 'photos.google.com','maps.app.goo.gl',
+  'forms.gle','sites.google.com','classroom.google.com','meet.google.com',
+  'calendar.google.com','sheets.google.com','slides.google.com','forms.google.com',
   'facebook.com', 'www.facebook.com', 'm.facebook.com',
   'twitter.com', 'www.twitter.com', 'x.com', 'www.x.com',
   'instagram.com', 'www.instagram.com',
@@ -130,7 +132,7 @@ function preCheck(url: string): PreCheckResult {
     return { status: SafetyStatusValues.SUSPICIOUS, reason: `Contains phishing-related keywords: ${keywordMatches.join(', ')}.` };
   }
 
-  if (path.length > 200) {
+  if (path.length > 400) {
     return { status: SafetyStatusValues.SUSPICIOUS, reason: 'Unusually long URL — may be hiding malicious parameters.' };
   }
 
@@ -248,14 +250,18 @@ Respond ONLY with a raw JSON object (no markdown, no code fences). Use this exac
       : SafetyStatusValues.SUSPICIOUS;
 
     if (pre.status === SafetyStatusValues.SUSPICIOUS && status === SafetyStatusValues.SAFE) {
-      const overrideResult = {
-        status: SafetyStatusValues.SUSPICIOUS,
-        reason: pre.reason,
-        title: data.title || 'Proceed with Caution',
-        description: data.description || 'Local heuristics flagged this URL. AI analysis was inconclusive.',
-      };
-      resultCache.set(url, overrideResult);
-      return overrideResult;
+      const knownSafePlatforms = ['google.com', 'googleapis.com', 'goo.gl', 'microsoft.com', 'apple.com'];
+      const isKnownPlatform = knownSafePlatforms.some(p => {
+        try { return new URL(url).hostname.endsWith(p); } catch { return false; }
+      });
+      if (!isKnownPlatform) {
+        return {
+          status: SafetyStatusValues.SUSPICIOUS,
+          reason: pre.reason,
+          title: data.title || 'Proceed with Caution',
+          description: data.description || 'Local heuristics flagged this URL.',
+        };
+      }
     }
 
     const finalResult = {
