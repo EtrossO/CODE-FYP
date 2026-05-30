@@ -37,6 +37,8 @@ const TRUSTED_DOMAINS = new Set([
   'docs.google.com', 'maps.google.com', 'photos.google.com','maps.app.goo.gl',
   'forms.gle','sites.google.com','classroom.google.com','meet.google.com',
   'calendar.google.com','sheets.google.com','slides.google.com','forms.google.com',
+  'www.openlearning.com','openlearning.com',
+  'www.padlet.com','padlet.com',
   'facebook.com', 'www.facebook.com', 'm.facebook.com',
   'twitter.com', 'www.twitter.com', 'x.com', 'www.x.com',
   'instagram.com', 'www.instagram.com',

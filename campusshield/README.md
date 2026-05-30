@@ -1,4 +1,55 @@
-# React + TypeScript + Vite
+# Campus Shield
+
+An AI-powered URL / QR-code phishing scanner (React + TypeScript + Vite).
+
+## Deploying to Cloudflare Pages
+
+This project is a static single-page app and is configured to deploy on
+**Cloudflare Pages**. The following files make it work:
+
+- `public/_redirects` – SPA catch-all so deep links / refreshes return `index.html`.
+- `public/_headers` – basic security + cache headers.
+- `.node-version` – pins the Cloudflare build image to Node 22.
+- `wrangler.toml` – Wrangler/Pages project settings (`pages_build_output_dir = "dist"`).
+
+### Option A — Connect your Git repo (recommended)
+
+1. Go to the [Cloudflare dashboard](https://dash.cloudflare.com/) → **Workers & Pages → Create → Pages → Connect to Git**.
+2. Select the `EtrossO/CODE-FYP` repository.
+3. Set the build settings:
+   - **Framework preset:** `Vite`
+   - **Build command:** `npm run build`
+   - **Build output directory:** `dist`
+4. Under **Settings → Environment variables**, add your keys (these are still
+   bundled into the client because the app calls the APIs from the browser):
+   - `VITE_API_KEY` = your Google Gemini API key
+   - `VITE_SAFE_BROWSING_API_KEY` = your Google Safe Browsing API key
+5. Click **Save and Deploy**. Every push to `main` then auto-deploys.
+
+> Note: Because this app calls Gemini / Safe Browsing directly from the browser,
+> the API keys are visible in the shipped bundle. To hide them you would need a
+> Cloudflare Worker / Pages Function proxy (not included in this deployment-only setup).
+
+### Option B — Deploy manually with Wrangler CLI
+
+```bash
+npm install            # installs deps incl. wrangler
+npm run pages:deploy   # builds then runs: wrangler pages deploy dist
+```
+
+The first run will prompt you to log in to Cloudflare and create the
+`campus-shield` Pages project.
+
+### Local preview of the production build
+
+```bash
+npm run build
+npm run pages:dev      # serves dist/ via wrangler with Pages behaviour
+```
+
+---
+
+## React + TypeScript + Vite (template notes)
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
