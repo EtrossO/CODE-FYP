@@ -83,10 +83,17 @@ function countDots(s: string): number {
   return (s.match(/\./g) || []).length;
 }
 
+function normalizeUrl(raw: string): string {
+  const s = raw.trim();
+  if (/^https?:\/\//i.test(s)) return s;
+  if (s.startsWith('//')) return `https:${s}`;
+  return `https://${s}`;
+}
+
 function preCheck(url: string): PreCheckResult {
   let u: URL;
   try {
-    u = new URL(url.startsWith('//') ? `https:${url}` : url);
+    u = new URL(normalizeUrl(url));
   } catch {
     return { status: SafetyStatusValues.SUSPICIOUS, reason: 'Invalid URL format.' };
   }

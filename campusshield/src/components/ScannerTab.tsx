@@ -412,7 +412,7 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
         console.log('✅ QR detected:', code.data);
         isProcessingRef.current = true;
         stopCamera();
-        handleCheckUrl(code.data);
+        handleCheckUrl(code.data.trim());
         return;
       }
     } catch (err) {
@@ -459,7 +459,7 @@ const ScannerTab: React.FC<ScannerTabProps> = ({ onCheck, isLoading }) => {
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
           const code = jsQR(imageData.data, imageData.width, imageData.height);
           if (code) {
-            handleCheckUrl(code.data);
+            handleCheckUrl(code.data.trim());
           } else {
             alert('No QR code found in image');
           }
