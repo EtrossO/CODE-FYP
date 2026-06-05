@@ -29,41 +29,6 @@ const TRUSTED_DOMAINS = new Set([
   'uptm.edu.my','kptm.edu.my','edupage.org',
 ]);
 
-const BRAND_NAMES = [
-  'google','youtube','facebook','instagram','twitter','linkedin',
-  'whatsapp','amazon','apple','microsoft','github','stackoverflow',
-  'wikipedia','reddit','netflix','spotify','telegram','discord',
-  'zoom','canva','figma','npmjs','react','paypal',
-  'uptm','kptm','edupage',
-];
-
-function levenshtein(a: string, b: string): number {
-  const m = a.length, n = b.length;
-  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
-  for (let i = 0; i <= m; i++) dp[i][0] = i;
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      dp[i][j] = a[i - 1] === b[j - 1]
-        ? dp[i - 1][j - 1]
-        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
-    }
-  }
-  return dp[m][n];
-}
-
-function checkTyposquat(hostname: string): number {
-  const parts = hostname.split('.');
-  const name = parts.length >= 2 ? parts[parts.length - 2] : parts[0];
-  for (const brand of BRAND_NAMES) {
-    if (name === brand) continue;
-    const dist = levenshtein(name, brand);
-    const threshold = brand.length <= 3 ? 1 : brand.length <= 5 ? 1 : 2;
-    if (dist > 0 && dist <= threshold) return 1;
-  }
-  return 0;
-}
-
 export interface UrlFeatures {
   urlLength: number;          // 0 long url
   dotCount: number;           // subdomain depth proxy
@@ -83,7 +48,6 @@ export interface UrlFeatures {
   brandSpoof: number;         // known brand in subdomain
   isTrusted: number;          // hostname in allowlist
   domainLength: number;       // very long domains suspicious
-  typosquat: number;          // domain similar to known brand
 }
 
 export function extractFeatures(url: string): UrlFeatures {
@@ -97,7 +61,7 @@ export function extractFeatures(url: string): UrlFeatures {
       isHttps: 0, isIp: 0, suspiciousTld: 1, isShortener: 0,
       pathLength: 1, keywordCount: 1, numericRatio: 0, hasPort: 1,
       subdomainDepth: 0, encodedChars: 1, cyrillicChars: 0,
-      brandSpoof: 0, isTrusted: 0, domainLength: 1, typosquat: 1,
+      brandSpoof: 0, isTrusted: 0, domainLength: 1,
     };
   }
 
@@ -137,7 +101,6 @@ export function extractFeatures(url: string): UrlFeatures {
     brandSpoof:     hasSpoof ? 1 : 0,
     isTrusted:      TRUSTED_DOMAINS.has(hostname) ? 1 : 0,
     domainLength:   Math.min(hostname.length / 60, 1),
-    typosquat:      checkTyposquat(hostname),
   };
 }
 
@@ -167,7 +130,7 @@ export async function getModel(): Promise<tf.LayersModel> {
 
 function buildModel(): tf.LayersModel {
   const m = tf.sequential();
-  m.add(tf.layers.dense({ inputShape: [19], units: 32, activation: 'relu',
+  m.add(tf.layers.dense({ inputShape: [18], units: 32, activation: 'relu',
     kernelInitializer: 'glorotUniform' }));
   m.add(tf.layers.dropout({ rate: 0.2 }));
   m.add(tf.layers.dense({ units: 16, activation: 'relu' }));
@@ -185,7 +148,6 @@ function syntheticLabel(f: UrlFeatures): [number, number, number] {
   if (f.cyrillicChars === 1)   return [0,0,1];
   if (f.brandSpoof === 1)      return [0,0,1];
   if (f.atSymbol === 1)        return [0,0,1];
-  if (f.typosquat === 1)       return [0,0,1];
 
   const riskScore =
     f.suspiciousTld * 0.25 +
@@ -199,9 +161,7 @@ function syntheticLabel(f: UrlFeatures): [number, number, number] {
 
   if (riskScore >= 0.45) return [0,0,1];
   if (riskScore >= 0.20) return [0,1,0];
-  // Non-trusted domains with clean features should still be SUSPICIOUS,
-  // not SAFE — forces fall-through to Safe Browsing and Gemini for verification.
-  return [0,1,0];
+  return [1,0,0];
 }
 
 function randomBetween(a: number, b: number) {
@@ -216,7 +176,6 @@ function generateSyntheticSamples(n: number): { xs: number[][]; ys: number[][] }
     const isTrusted = Math.random() < 0.2 ? 1 : 0;
     const isIp      = !isTrusted && Math.random() < 0.05 ? 1 : 0;
     const spoof     = !isTrusted && !isIp && Math.random() < 0.08 ? 1 : 0;
-    const typo      = !isTrusted && !isIp && !spoof && Math.random() < 0.1 ? 1 : 0;
 
     const f: UrlFeatures = {
       urlLength:      randomBetween(0.05, isTrusted ? 0.3 : 0.9),
@@ -237,7 +196,6 @@ function generateSyntheticSamples(n: number): { xs: number[][]; ys: number[][] }
       brandSpoof:     spoof ? 1 : 0,
       isTrusted,
       domainLength:   randomBetween(0, isTrusted ? 0.4 : 0.9),
-      typosquat:      typo,
     };
 
     xs.push(Object.values(f) as number[]);

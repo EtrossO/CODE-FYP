@@ -72,48 +72,6 @@ const resultCache = new Map<string, {
   status: SafetyStatus; reason: string; title: string; description: string;
 }>();
 
-// ─── Typosquatting detection ──────────────────────────────────────────────────
-
-const BRAND_NAMES = [
-  'google','youtube','gmail','drive','docs','maps','photos','sites',
-  'classroom','meet','calendar','sheets','slides','forms',
-  'facebook','instagram','twitter','linkedin','whatsapp',
-  'amazon','apple','microsoft','github','stackoverflow',
-  'wikipedia','netflix','spotify','telegram','discord','reddit',
-  'zoom','canva','figma','npmjs','react',
-  'paypal','openlearning','padlet','edupage',
-  'uptm','kptm',
-];
-
-function levenshtein(a: string, b: string): number {
-  const m = a.length, n = b.length;
-  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
-  for (let i = 0; i <= m; i++) dp[i][0] = i;
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      dp[i][j] = a[i - 1] === b[j - 1]
-        ? dp[i - 1][j - 1]
-        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
-    }
-  }
-  return dp[m][n];
-}
-
-function isTyposquatting(hostname: string): string | null {
-  const parts = hostname.split('.');
-  const name = parts.length >= 2 ? parts[parts.length - 2] : parts[0];
-  for (const brand of BRAND_NAMES) {
-    if (name === brand) continue;
-    const dist = levenshtein(name, brand);
-    const threshold = brand.length <= 3 ? 1 : brand.length <= 5 ? 1 : 2;
-    if (dist > 0 && dist <= threshold) {
-      return brand;
-    }
-  }
-  return null;
-}
-
 // ─── Stage 1: Rule-based heuristics ──────────────────────────────────────────
 
 interface PreCheckResult {
@@ -213,12 +171,6 @@ function preCheck(url: string): PreCheckResult {
       reason: 'Domain appears to be impersonating a well-known brand using a subdomain trick.' };
   }
 
-  const squattedBrand = isTyposquatting(hostname);
-  if (squattedBrand) {
-    return { status: SafetyStatusValues.UNSAFE,
-      reason: `Domain "${hostname}" closely resembles "${squattedBrand}" — typosquatting domains are often used for phishing attacks.` };
-  }
-
   return { status: null, reason: '' };
 }
 
@@ -267,25 +219,14 @@ export const analyzeLinkSafety = async (url: string): Promise<{
 
     if (ml.isHighConfidence) {
       if (ml.label === 'SAFE') {
-        // Re-verify the domain is trusted — ML should not grant SAFE for
-        // unknown domains; they must go through Safe Browsing and Gemini.
-        let hostname = '';
-        try {
-          hostname = new URL(url.startsWith('//') ? `https:${url}` : url).hostname.toLowerCase();
-        } catch { /* ignore */ }
-        if (!TRUSTED_DOMAINS.has(hostname)) {
-          // Non-trusted domain → fall through to next stages
-          console.log('⏩ ML says SAFE but domain not trusted — deferring to Safe Browsing & Gemini');
-        } else {
-          const result = {
-            status: SafetyStatusValues.SAFE,
-            reason: `AI classifier assessed this URL as safe (${(ml.confidence * 100).toFixed(0)}% confidence). No threat indicators found.`,
-            title: 'Likely Safe',
-            description: 'On-device ML analysis found no signs of phishing or malware.',
-          };
-          resultCache.set(url, result);
-          return result;
-        }
+        const result = {
+          status: SafetyStatusValues.SAFE,
+          reason: `AI classifier assessed this URL as safe (${(ml.confidence * 100).toFixed(0)}% confidence). No threat indicators found.`,
+          title: 'Likely Safe',
+          description: 'On-device ML analysis found no signs of phishing or malware.',
+        };
+        resultCache.set(url, result);
+        return result;
       }
 
       if (ml.label === 'UNSAFE') {
