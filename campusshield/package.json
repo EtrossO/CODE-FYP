@@ -11,12 +11,14 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "train-model": "node scripts/trainModel.js",
     "pages:dev": "wrangler pages dev dist",
     "pages:deploy": "npm run build && wrangler pages deploy dist"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@tensorflow/tfjs": "^4.22.0",
+    "@tensorflow/tfjs-node": "^4.22.0",
     "dexie": "^4.4.2",
     "jsqr": "^1.4.0",
     "react": "^19.2.0",

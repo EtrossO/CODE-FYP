@@ -1,8 +1,5 @@
 import * as tf from '@tensorflow/tfjs';
 
-// ─── Feature extraction ───────────────────────────────────────────────────────
-// 18 numeric features derived purely from the URL string — no network calls.
-
 const SUSPICIOUS_TLDS = new Set([
   'tk','ml','ga','cf','gq','xyz','top','work','date','men','loan',
   'download','win','bid','trade','webcam','review','science','party',
@@ -30,24 +27,24 @@ const TRUSTED_DOMAINS = new Set([
 ]);
 
 export interface UrlFeatures {
-  urlLength: number;          // 0 long url
-  dotCount: number;           // subdomain depth proxy
-  dashCount: number;          // hyphens in hostname
-  atSymbol: number;           // @ in url = suspicious
-  isHttps: number;            // 1 = https
-  isIp: number;               // raw IP address
-  suspiciousTld: number;      // known bad TLD
-  isShortener: number;        // url shortener
-  pathLength: number;         // very long path suspicious
-  keywordCount: number;       // phishing keywords hit
-  numericRatio: number;       // ratio of digits in hostname
-  hasPort: number;            // explicit port = unusual
-  subdomainDepth: number;     // dots before registered domain
-  encodedChars: number;       // % encoding in hostname
-  cyrillicChars: number;      // homograph attack indicator
-  brandSpoof: number;         // known brand in subdomain
-  isTrusted: number;          // hostname in allowlist
-  domainLength: number;       // very long domains suspicious
+  urlLength: number;
+  dotCount: number;
+  dashCount: number;
+  atSymbol: number;
+  isHttps: number;
+  isIp: number;
+  suspiciousTld: number;
+  isShortener: number;
+  pathLength: number;
+  keywordCount: number;
+  numericRatio: number;
+  hasPort: number;
+  subdomainDepth: number;
+  encodedChars: number;
+  cyrillicChars: number;
+  brandSpoof: number;
+  isTrusted: number;
+  domainLength: number;
 }
 
 export function extractFeatures(url: string): UrlFeatures {
@@ -55,7 +52,6 @@ export function extractFeatures(url: string): UrlFeatures {
   try {
     u = new URL(url.startsWith('//') ? `https:${url}` : url);
   } catch {
-    // Unparseable — max-suspicion feature vector
     return {
       urlLength: 1, dotCount: 0, dashCount: 0, atSymbol: 1,
       isHttps: 0, isIp: 0, suspiciousTld: 1, isShortener: 0,
@@ -71,14 +67,12 @@ export function extractFeatures(url: string): UrlFeatures {
   const regDomain = parts.length >= 2 ? parts.slice(-2).join('.') : hostname;
   const path     = u.pathname + u.search;
 
-  // Brand spoof: well-known brand appears as a subdomain prefix but isn't the root
   const brands = ['paypal','facebook','instagram','twitter','linkedin',
                   'whatsapp','amazon','apple','microsoft','google','netflix'];
   const hasSpoof = brands.some(b =>
     hostname.includes(b) && !hostname.endsWith('.' + b) && !hostname.startsWith(b + '.')
   );
 
-  // Normalised to [0,1] ranges where useful
   return {
     urlLength:      Math.min(url.length / 200, 1),
     dotCount:       Math.min((hostname.match(/\./g) || []).length / 6, 1),
@@ -109,39 +103,63 @@ export function featuresToTensor(features: UrlFeatures): tf.Tensor2D {
   return tf.tensor2d([vec], [1, vec.length]);
 }
 
-// ─── Model ────────────────────────────────────────────────────────────────────
-
 let model: tf.LayersModel | null = null;
 
 /**
- * Build and train a small feed-forward network on synthetic rule-based labels.
- * In production you'd load a pre-trained model with tf.loadLayersModel().
- * Here we generate ~800 training examples from the same heuristics already in
- * geminiService.ts, so the model learns to generalise them.
+ * Deep model: 128 → BN → ReLU → Drop(0.3) → 64 → BN → ReLU → Drop(0.3) → 32 → BN → ReLU → Drop(0.2) → 3 → Softmax
+ * Tries to load a pre-trained model from /tfjs_model/model.json first.
+ * Falls back to synthetic-data training if the file is not found.
  */
 export async function getModel(): Promise<tf.LayersModel> {
   if (model) return model;
 
-  model = buildModel();
-  await trainModel(model);
-  console.log('✅ TF.js URL classifier ready');
+  const modelUrl = `${window.location.origin}/tfjs_model/model.json`;
+  try {
+    const loaded = await tf.loadLayersModel(modelUrl);
+    model = loaded;
+    console.log('✅ Pre-trained TF.js URL classifier loaded from', modelUrl);
+    return model;
+  } catch {
+    console.warn('⚠️ Pre-trained model not found at', modelUrl, '— training on synthetic data as fallback.');
+  }
+
+  model = buildDeepModel();
+  await trainModelSynthetic(model);
+  console.log('✅ TF.js URL classifier (synthetic fallback) ready');
   return model;
 }
 
-function buildModel(): tf.LayersModel {
-  const m = tf.sequential();
-  m.add(tf.layers.dense({ inputShape: [18], units: 32, activation: 'relu',
-    kernelInitializer: 'glorotUniform' }));
-  m.add(tf.layers.dropout({ rate: 0.2 }));
-  m.add(tf.layers.dense({ units: 16, activation: 'relu' }));
-  m.add(tf.layers.dense({ units: 3, activation: 'softmax' })); // [safe, suspicious, unsafe]
-  m.compile({ optimizer: tf.train.adam(0.001), loss: 'categoricalCrossentropy',
-    metrics: ['accuracy'] });
+function buildDeepModel(): tf.LayersModel {
+  const input = tf.input({ shape: [18] });
+
+  const x = tf.layers.dense({ units: 128, kernelInitializer: 'glorotUniform' }).apply(input) as tf.SymbolicTensor;
+  const b1 = tf.layers.batchNormalization().apply(x) as tf.SymbolicTensor;
+  const a1 = tf.layers.leakyReLU({ alpha: 0.1 }).apply(b1) as tf.SymbolicTensor;
+  const d1 = tf.layers.dropout({ rate: 0.3 }).apply(a1) as tf.SymbolicTensor;
+
+  const y = tf.layers.dense({ units: 64, kernelInitializer: 'glorotUniform' }).apply(d1) as tf.SymbolicTensor;
+  const b2 = tf.layers.batchNormalization().apply(y) as tf.SymbolicTensor;
+  const a2 = tf.layers.leakyReLU({ alpha: 0.1 }).apply(b2) as tf.SymbolicTensor;
+  const d2 = tf.layers.dropout({ rate: 0.3 }).apply(a2) as tf.SymbolicTensor;
+
+  const z = tf.layers.dense({ units: 32, kernelInitializer: 'glorotUniform' }).apply(d2) as tf.SymbolicTensor;
+  const b3 = tf.layers.batchNormalization().apply(z) as tf.SymbolicTensor;
+  const a3 = tf.layers.leakyReLU({ alpha: 0.1 }).apply(b3) as tf.SymbolicTensor;
+  const d3 = tf.layers.dropout({ rate: 0.2 }).apply(a3) as tf.SymbolicTensor;
+
+  const output = tf.layers.dense({ units: 3, activation: 'softmax' }).apply(d3) as tf.SymbolicTensor;
+
+  const m = tf.model({ inputs: input, outputs: output });
+  m.compile({
+    optimizer: tf.train.adam(0.001),
+    loss: 'categoricalCrossentropy',
+    metrics: ['accuracy'],
+  });
   return m;
 }
 
-// Synthetic dataset generator — labels come from rule-based logic.
-// Classes: 0 = SAFE, 1 = SUSPICIOUS, 2 = UNSAFE
+// ─── Synthetic fallback ────────────────────────────────────────────────────────
+
 function syntheticLabel(f: UrlFeatures): [number, number, number] {
   if (f.isTrusted === 1)       return [1,0,0];
   if (f.isIp === 1)            return [0,0,1];
@@ -204,13 +222,13 @@ function generateSyntheticSamples(n: number): { xs: number[][]; ys: number[][] }
   return { xs, ys };
 }
 
-async function trainModel(m: tf.LayersModel): Promise<void> {
-  const { xs, ys } = generateSyntheticSamples(1200);
+async function trainModelSynthetic(m: tf.LayersModel): Promise<void> {
+  const { xs, ys } = generateSyntheticSamples(3000);
   const xTensor = tf.tensor2d(xs);
   const yTensor = tf.tensor2d(ys);
 
   await m.fit(xTensor, yTensor, {
-    epochs: 30,
+    epochs: 50,
     batchSize: 32,
     validationSplit: 0.15,
     shuffle: true,
@@ -221,15 +239,15 @@ async function trainModel(m: tf.LayersModel): Promise<void> {
   yTensor.dispose();
 }
 
-// ─── Inference ────────────────────────────────────────────────────────────────
+// ─── Inference ─────────────────────────────────────────────────────────────────
 
 export interface MLResult {
   label: 'SAFE' | 'SUSPICIOUS' | 'UNSAFE';
-  confidence: number; // 0–1
+  confidence: number;
   isHighConfidence: boolean;
 }
 
-const CONFIDENCE_THRESHOLD = 0.80; // Only act on high-confidence predictions
+const CONFIDENCE_THRESHOLD = 0.80;
 
 export async function classifyUrl(url: string): Promise<MLResult> {
   const m = await getModel();
@@ -237,7 +255,7 @@ export async function classifyUrl(url: string): Promise<MLResult> {
   const input    = featuresToTensor(features);
 
   const output = m.predict(input) as tf.Tensor;
-  const probs  = await output.data() as Float32Array; // [safe, suspicious, unsafe]
+  const probs  = await output.data() as Float32Array;
 
   input.dispose();
   output.dispose();
