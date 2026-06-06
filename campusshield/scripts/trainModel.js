@@ -413,43 +413,44 @@ async function main() {
   console.log(`   Train Loss: ${finalLoss} | Train Acc: ${finalAcc}%`);
   console.log(`   Val Loss:   ${valLoss} | Val Acc:   ${valAcc}%`);
 
-  // Save
+  // Save using TF.js IO handler (produces format loadLayersModel expects)
   fs.mkdirSync(outputDir, { recursive: true });
 
-  const topology = model.toJSON();
-  const weightTensors = model.getWeights();
-  const weightData = await Promise.all(weightTensors.map(t => t.data()));
-  const weightSpecs = weightTensors.map((t, i) => ({
-    name: t.name.replace(/\//g, '_').replace(/:/g, '_'),
-    shape: t.shape,
-    dtype: t.dtype,
-  }));
+  const saveResult = await model.save(tf.io.withSaveHandler(async (artifacts) => {
+    const { modelTopology, weightSpecs, weightData } = artifacts;
 
-  const chunks = weightData.map(d => Buffer.from(d.buffer));
-  const shardBuffer = Buffer.concat(chunks);
-  let offset = 0;
-  const weightOffsets = chunks.map(c => {
-    const off = offset;
-    offset += c.length;
-    return off;
-  });
+    // Write weight shard
+    const shardBuffer = Buffer.from(weightData);
+    fs.writeFileSync(path.join(outputDir, 'group1-shard1of1.bin'), shardBuffer);
 
-  fs.writeFileSync(path.join(outputDir, 'model.json'), JSON.stringify({
-    modelTopology: topology,
-    weightsManifest: [{
-      paths: ['group1-shard1of1.bin'],
-      weights: weightSpecs.map((spec, i) => ({
+    // Build weight manifest with offsets
+    let byteOffset = 0;
+    const manifestWeights = weightSpecs.map(spec => {
+      const w = {
         name: spec.name,
         shape: spec.shape,
         dtype: spec.dtype,
-        offset: weightOffsets[i],
-        size: chunks[i].length,
-      })),
-    }],
-  }, null, 2));
-  fs.writeFileSync(path.join(outputDir, 'group1-shard1of1.bin'), shardBuffer);
+        offset: byteOffset,
+        size: spec.shape.reduce((a, b) => a * b, 1) * 4, // float32 = 4 bytes
+      };
+      byteOffset += w.size;
+      return w;
+    });
 
-  weightTensors.forEach(t => t.dispose());
+    // Write model.json
+    fs.writeFileSync(path.join(outputDir, 'model.json'), JSON.stringify({
+      modelTopology,
+      weightsManifest: [{
+        paths: ['group1-shard1of1.bin'],
+        weights: manifestWeights,
+      }],
+    }, null, 2));
+
+    return { modelArtifactsInfo: { dateSaved: new Date(), modelTopologyType: 'JSON', modelTopologyBytes: 0, weightSpecsBytes: 0, weightDataBytes: 0 } };
+  }));
+
+  // Note: saved via IO handler above. The model.json and weight files are
+  // already written inside the handler callback.
 
   console.log(`\n💾 Model saved to: ${outputDir}/`);
   console.log(`   ├─ model.json`);

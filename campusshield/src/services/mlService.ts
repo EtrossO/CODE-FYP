@@ -19,13 +19,22 @@ export async function getModel(): Promise<tf.LayersModel> {
   if (model) return model;
 
   const modelUrl = `${window.location.origin}/tfjs_model/model.json`;
+  const loadTimeout = new Promise<null>((_, reject) =>
+    setTimeout(() => reject(new Error('timeout')), 8000)
+  );
+
   try {
-    const loaded = await tf.loadLayersModel(modelUrl);
-    model = loaded;
-    console.log('✅ Pre-trained TF.js URL classifier loaded from', modelUrl);
-    return model;
+    const loaded = await Promise.race([
+      tf.loadLayersModel(modelUrl),
+      loadTimeout,
+    ]);
+    if (loaded) {
+      model = loaded;
+      console.log('✅ Pre-trained TF.js URL classifier loaded from', modelUrl);
+      return model;
+    }
   } catch {
-    console.warn('⚠️ Pre-trained model not found at', modelUrl, '— training on synthetic data as fallback.');
+    console.warn('⚠️ Could not load pre-trained model from', modelUrl, '— training on synthetic data as fallback.');
   }
 
   model = buildDeepModel();
@@ -152,12 +161,14 @@ function generateSyntheticSamples(n: number): { xs: number[][]; ys: number[][] }
 }
 
 async function trainModelSynthetic(m: tf.LayersModel): Promise<void> {
-  const { xs, ys } = generateSyntheticSamples(5000);
+  console.log('⏳ Training synthetic fallback model (1000 samples, 10 epochs)...');
+  const start = performance.now();
+  const { xs, ys } = generateSyntheticSamples(1000);
   const xTensor = tf.tensor2d(xs);
   const yTensor = tf.tensor2d(ys);
 
   await m.fit(xTensor, yTensor, {
-    epochs: 60,
+    epochs: 10,
     batchSize: 32,
     validationSplit: 0.15,
     shuffle: true,
@@ -166,6 +177,7 @@ async function trainModelSynthetic(m: tf.LayersModel): Promise<void> {
 
   xTensor.dispose();
   yTensor.dispose();
+  console.log(`✅ Synthetic model trained in ${((performance.now() - start) / 1000).toFixed(1)}s`);
 }
 
 // ─── Inference ─────────────────────────────────────────────────────────────────
