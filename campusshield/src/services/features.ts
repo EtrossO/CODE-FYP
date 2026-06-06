@@ -35,6 +35,11 @@ function isGibberish(segment: string): boolean {
   if (entropy < 0.6) return false; // too structured
   const vowels = (segment.match(/[aeiou]/gi) || []).length;
   const letters = (segment.match(/[a-zA-Z]/g) || []).length;
+  // Short segments (<12 chars) need stronger evidence to avoid false positives
+  if (segment.length < 12) {
+    if (vowels > 0) return false; // has readable characters
+    return entropy > 0.7 && letters >= 4; // truly random-looking
+  }
   // If >80% of letters are consonants AND high entropy, likely random
   if (letters > 0 && (letters - vowels) / letters > 0.8) return true;
   // Check for keyboard smashes (no vowels at all in a long segment)
@@ -45,6 +50,7 @@ function isGibberish(segment: string): boolean {
 /** Does the path segment look like a base64 token? */
 function looksLikeBase64(s: string): boolean {
   if (s.length < 16) return false;
+  if (!/\d/.test(s)) return false; // base64 almost always has digits
   return /^[A-Za-z0-9+/=_\-]{16,}$/.test(s);
 }
 
@@ -82,6 +88,41 @@ const SUSPICIOUS_EXTENSIONS = new Set([
 const COMMON_TLDS = new Set([
   'com','org','net','edu','gov','mil','my','uk','jp','de','fr','au',
   'ca','in','br','kr','sg','hk','nz','th','ph','id','vn',
+]);
+
+const TRUSTED_DOMAINS = new Set([
+  'youtube.com','www.youtube.com','m.youtube.com',
+  'google.com','goo.gl','www.google.com','mail.google.com','drive.google.com',
+  'docs.google.com','maps.google.com','photos.google.com','maps.app.goo.gl',
+  'forms.gle','sites.google.com','classroom.google.com','meet.google.com',
+  'calendar.google.com','sheets.google.com','slides.google.com','forms.google.com',
+  'www.openlearning.com','openlearning.com',
+  'www.padlet.com','padlet.com',
+  'facebook.com','www.facebook.com','m.facebook.com',
+  'twitter.com','www.twitter.com','x.com','www.x.com',
+  'instagram.com','www.instagram.com',
+  'linkedin.com','www.linkedin.com',
+  'whatsapp.com','www.whatsapp.com',
+  'amazon.com','www.amazon.com',
+  'apple.com','www.apple.com',
+  'microsoft.com','www.microsoft.com',
+  'github.com','www.github.com',
+  'stackoverflow.com','www.stackoverflow.com',
+  'wikipedia.org','www.wikipedia.org','en.wikipedia.org',
+  'netflix.com','www.netflix.com',
+  'spotify.com','www.spotify.com',
+  'telegram.org','www.telegram.org',
+  'discord.com','www.discord.com',
+  'reddit.com','www.reddit.com',
+  'zoom.us','www.zoom.us',
+  'canva.com','www.canva.com',
+  'figma.com','www.figma.com',
+  'npmjs.com','www.npmjs.com',
+  'react.dev','www.react.dev',
+  'uptm.edu.my','www.uptm.edu.my',
+  'kptm.edu.my','www.kptm.edu.my',
+  'lms.uptm.edu.my','mycms.kptm.edu.my',
+  'epay.kptm.edu.my','edupage.org','uptm.edupage.org',
 ]);
 
 // ─── Feature interface ─────────────────────────────────────────────────────────
@@ -161,46 +202,21 @@ export function extractFeatures(url: string): UrlFeatures {
 
   // ── Domain features ───────────────────────────────────────────────────────
 
-  const brands = ['paypal','facebook','instagram','twitter','linkedin',
-    'whatsapp','amazon','apple','microsoft','google','netflix'];
-  const hasSpoof = brands.some(b =>
-    hostname.includes(b) && !hostname.endsWith('.' + b) && !hostname.startsWith(b + '.')
-  );
-
-  const TRUSTED_DOMAINS = new Set([
-    'youtube.com','www.youtube.com','m.youtube.com',
-    'google.com','goo.gl','www.google.com','mail.google.com','drive.google.com',
-    'docs.google.com','maps.google.com','photos.google.com','maps.app.goo.gl',
-    'forms.gle','sites.google.com','classroom.google.com','meet.google.com',
-    'calendar.google.com','sheets.google.com','slides.google.com','forms.google.com',
-    'www.openlearning.com','openlearning.com',
-    'www.padlet.com','padlet.com',
-    'facebook.com','www.facebook.com','m.facebook.com',
-    'twitter.com','www.twitter.com','x.com','www.x.com',
-    'instagram.com','www.instagram.com',
-    'linkedin.com','www.linkedin.com',
-    'whatsapp.com','www.whatsapp.com',
-    'amazon.com','www.amazon.com',
-    'apple.com','www.apple.com',
-    'microsoft.com','www.microsoft.com',
-    'github.com','www.github.com',
-    'stackoverflow.com','www.stackoverflow.com',
-    'wikipedia.org','www.wikipedia.org','en.wikipedia.org',
-    'netflix.com','www.netflix.com',
-    'spotify.com','www.spotify.com',
-    'telegram.org','www.telegram.org',
-    'discord.com','www.discord.com',
-    'reddit.com','www.reddit.com',
-    'zoom.us','www.zoom.us',
-    'canva.com','www.canva.com',
-    'figma.com','www.figma.com',
-    'npmjs.com','www.npmjs.com',
-    'react.dev','www.react.dev',
-    'uptm.edu.my','www.uptm.edu.my',
-    'kptm.edu.my','www.kptm.edu.my',
-    'lms.uptm.edu.my','mycms.kptm.edu.my',
-    'epay.kptm.edu.my','edupage.org','uptm.edupage.org',
-  ]);
+  // Brand spoof: catch subdomain-of-brand and embedded-brand-domain patterns
+  const spoofBrands = ['paypal.com','facebook.com','instagram.com','twitter.com',
+    'linkedin.com','whatsapp.com','amazon.com','apple.com','microsoft.com',
+    'google.com','gmail.com','netflix.com'];
+  const hasSpoof = spoofBrands.some(d => {
+    if (hostname === d) return false;
+    // Check 1: subdomain of brand — docs.google.com → endsWith('.google.com')
+    const isSubdomain = hostname.endsWith('.' + d);
+    // Check 2: embedded brand — google.com.evil.com → startsWith('google.com.') or contains '.google.com.'
+    const isEmbedded = hostname.startsWith(d + '.') || hostname.includes('.' + d + '.');
+    if (!isSubdomain && !isEmbedded) return false;
+    const parts = hostname.split('.');
+    const rd = parts.length >= 2 ? parts.slice(-2).join('.') : hostname;
+    return !TRUSTED_DOMAINS.has(hostname) && !TRUSTED_DOMAINS.has(rd);
+  });
 
   // ── Path features ─────────────────────────────────────────────────────────
 
@@ -225,7 +241,13 @@ export function extractFeatures(url: string): UrlFeatures {
   // Check: does any path segment contain a known TLD? (e.g., /something.com/login)
   const hasTldInPath = segments.some(seg => {
     const segLower = seg.toLowerCase();
-    return COMMON_TLDS.has(segLower) || [...COMMON_TLDS].some(t => segLower.endsWith('.' + t));
+    if (COMMON_TLDS.has(segLower)) return true;
+    const dotIdx = segLower.lastIndexOf('.');
+    if (dotIdx > 0) {
+      const ext = segLower.slice(dotIdx + 1);
+      if (COMMON_TLDS.has(ext)) return true;
+    }
+    return false;
   }) ? 1 : 0;
 
   // Phishing keywords specifically in path
@@ -351,10 +373,14 @@ export function pathHeuristics(u: URL): HeuristicScore {
     weight(0.10, `Phishing keyword in path`);
   }
 
-  // 6. TLD in path (e.g., /something.com/login)
-  const hasTld = [...COMMON_TLDS].some(t => {
-    const dotTld = '.' + t;
-    return pathname.toLowerCase().includes(dotTld);
+  // 6. TLD in path (e.g., /something.com/login) — match segment extensions only
+  const hasTld = segments.some(seg => {
+    if (COMMON_TLDS.has(seg.toLowerCase())) return true;
+    const dotIdx = seg.lastIndexOf('.');
+    if (dotIdx > 0) {
+      return COMMON_TLDS.has(seg.slice(dotIdx + 1).toLowerCase());
+    }
+    return false;
   });
   if (hasTld) {
     weight(0.25, `TLD pattern found in URL path (may be impersonating a domain)`);

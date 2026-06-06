@@ -160,10 +160,18 @@ function preCheck(url: string): PreCheckResult {
   const brandDomains = ['paypal.com','facebook.com','instagram.com','twitter.com','x.com',
     'linkedin.com','whatsapp.com','amazon.com','apple.com','microsoft.com',
     'google.com','gmail.com','netflix.com','bank','secure'];
+  // Brand spoof: catch subdomain-of-brand AND embedded-brand-domain patterns.
+  // e.g., docs.google.com is fine, but google.com.evil.com is spoofing.
   const hasSpoof = brandDomains.some(d => {
     if (d === 'bank')   return hostname.includes('bank') && !hostname.endsWith('.bank');
     if (d === 'secure') return false;
-    return hostname !== d && hostname.endsWith('.' + d);
+    if (hostname === d) return false;
+    const isSubdomain = hostname.endsWith('.' + d);
+    const isEmbedded = !isSubdomain && (hostname.startsWith(d + '.') || hostname.includes('.' + d + '.'));
+    if (!isSubdomain && !isEmbedded) return false;
+    const parts = hostname.split('.');
+    const rd = parts.length >= 2 ? parts.slice(-2).join('.') : hostname;
+    return !TRUSTED_DOMAINS.has(hostname) && !TRUSTED_DOMAINS.has(rd);
   });
   if (hasSpoof) {
     return { status: SafetyStatusValues.UNSAFE,

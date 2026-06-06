@@ -35,6 +35,10 @@ function isGibberish(segment) {
   if (entropy < 0.6) return false;
   const vowels = (segment.match(/[aeiou]/gi) || []).length;
   const letters = (segment.match(/[a-zA-Z]/g) || []).length;
+  if (segment.length < 12) {
+    if (vowels > 0) return false;
+    return entropy > 0.7 && letters >= 4;
+  }
   if (letters > 0 && (letters - vowels) / letters > 0.8) return true;
   if (segment.length >= 6 && vowels === 0 && letters >= 4) return true;
   return false;
@@ -42,6 +46,7 @@ function isGibberish(segment) {
 
 function looksLikeBase64(s) {
   if (s.length < 16) return false;
+  if (!/\d/.test(s)) return false;
   return /^[A-Za-z0-9+/=_\-]{16,}$/.test(s);
 }
 
@@ -136,11 +141,18 @@ function extractFeatures(url) {
   const query = u.search;
 
   // Domain features
-  const brands = ['paypal','facebook','instagram','twitter','linkedin',
-    'whatsapp','amazon','apple','microsoft','google','netflix'];
-  const hasSpoof = brands.some(b =>
-    hostname.includes(b) && !hostname.endsWith('.' + b) && !hostname.startsWith(b + '.')
-  );
+  const spoofBrands = ['paypal.com','facebook.com','instagram.com','twitter.com',
+    'linkedin.com','whatsapp.com','amazon.com','apple.com','microsoft.com',
+    'google.com','gmail.com','netflix.com'];
+  const hasSpoof = spoofBrands.some(d => {
+    if (hostname === d) return false;
+    const isSubdomain = hostname.endsWith('.' + d);
+    const isEmbedded = !isSubdomain && (hostname.startsWith(d + '.') || hostname.includes('.' + d + '.'));
+    if (!isSubdomain && !isEmbedded) return false;
+    const parts = hostname.split('.');
+    const rd = parts.length >= 2 ? parts.slice(-2).join('.') : hostname;
+    return !TRUSTED_DOMAINS.has(hostname) && !TRUSTED_DOMAINS.has(rd);
+  });
 
   // Path features
   const segments = pathname.split('/').filter(Boolean);
@@ -155,7 +167,13 @@ function extractFeatures(url) {
   const pathSpecialCharRatio = pathname.length > 0 ? specialChars / pathname.length : 0;
   const hasTldInPath = segments.some(seg => {
     const segLower = seg.toLowerCase();
-    return COMMON_TLDS.has(segLower) || [...COMMON_TLDS].some(t => segLower.endsWith('.' + t));
+    if (COMMON_TLDS.has(segLower)) return true;
+    const dotIdx = segLower.lastIndexOf('.');
+    if (dotIdx > 0) {
+      const ext = segLower.slice(dotIdx + 1);
+      if (COMMON_TLDS.has(ext)) return true;
+    }
+    return false;
   }) ? 1 : 0;
   const kwInPath = PHISHING_PATH_KW.filter(kw => pathname.toLowerCase().includes(kw)).length;
   const lastSeg = segments[segments.length - 1] || '';
