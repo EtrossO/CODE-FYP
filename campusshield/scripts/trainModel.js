@@ -1,18 +1,9 @@
 /**
- * Offline TF.js URL Phishing Classifier Training Script
+ * Campus Shield — TF.js Model Trainer (29-feature)
  *
  * Usage:
- *   node scripts/trainModel.js                              ← synthetic data only
- *   node scripts/trainModel.js --data ./dataset.csv         ← real CSV
- *   node scripts/trainModel.js --data ./dataset.csv --epochs 100 --output ./public/tfjs_model
- *
- * CSV format: url,label
- *   label = safe | suspicious | unsafe   (or 0 | 1 | 2)
- *
- * Dataset sources:
- *   - PhishTank:        https://phishtank.com/developer_info.php
- *   - Phishing.Database: https://github.com/mitchellkrogza/Phishing.Database
- *   - UCI ML Repo:      https://archive.ics.uci.edu/dataset/327/phishing+websites
+ *   node scripts/trainModel.js                              ← synthetic only
+ *   node scripts/trainModel.js --data ./dataset.csv --epochs 100
  */
 
 import * as tf from '@tensorflow/tfjs';
@@ -21,7 +12,42 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline';
 
-// ─── Feature extraction (ported from mlService.ts) ────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// Feature extraction (mirrors features.ts exactly)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function shannonEntropy(s) {
+  const len = s.length;
+  if (len < 2) return 0;
+  const freq = {};
+  for (const ch of s) freq[ch] = (freq[ch] || 0) + 1;
+  let h = 0;
+  for (const ch in freq) {
+    const p = freq[ch] / len;
+    h -= p * Math.log2(p);
+  }
+  return Math.min(h / 4, 1);
+}
+
+function isGibberish(segment) {
+  if (segment.length < 4) return false;
+  const entropy = shannonEntropy(segment);
+  if (entropy < 0.6) return false;
+  const vowels = (segment.match(/[aeiou]/gi) || []).length;
+  const letters = (segment.match(/[a-zA-Z]/g) || []).length;
+  if (letters > 0 && (letters - vowels) / letters > 0.8) return true;
+  if (segment.length >= 6 && vowels === 0 && letters >= 4) return true;
+  return false;
+}
+
+function looksLikeBase64(s) {
+  if (s.length < 16) return false;
+  return /^[A-Za-z0-9+/=_\-]{16,}$/.test(s);
+}
+
+function hasRepeatedRun(s, minRun = 4) {
+  return /(.)\1{3,}/.test(s);
+}
 
 const SUSPICIOUS_TLDS = new Set([
   'tk','ml','ga','cf','gq','xyz','top','work','date','men','loan',
@@ -34,10 +60,12 @@ const SHORTENERS = new Set([
   'shorturl.at','rb.gy','tiny.cc','cutt.ly','s.id',
 ]);
 
-const PHISHING_KW = [
+const PHISHING_PATH_KW = [
   'login','signin','verify','secure','update','confirm','account',
   'password','credential','banking','paypal','refund','reward','prize',
   'winner','free','urgent','suspended','restrict','unlock','authenticate',
+  'token','reset','recovery','authorize','auth','session','2fa','mfa',
+  'verification','identity','validate','billing','invoice','payment',
 ];
 
 const TRUSTED_DOMAINS = new Set([
@@ -49,57 +77,102 @@ const TRUSTED_DOMAINS = new Set([
   'uptm.edu.my','kptm.edu.my','edupage.org',
 ]);
 
+const COMMON_TLDS = new Set([
+  'com','org','net','edu','gov','mil','my','uk','jp','de','fr','au',
+  'ca','in','br','kr','sg','hk','nz','th','ph','id','vn',
+]);
+
 function extractFeatures(url) {
   let u;
   try {
-    u = new URL(url.startsWith('//') ? `https:${url}` : url);
+    const s = url.trim();
+    const normalized = /^https?:\/\//i.test(s) ? s : s.startsWith('//') ? `https:${s}` : `https://${s}`;
+    u = new URL(normalized);
   } catch {
     return {
-      urlLength: 1, dotCount: 0, dashCount: 0, atSymbol: 1,
-      isHttps: 0, isIp: 0, suspiciousTld: 1, isShortener: 0,
-      pathLength: 1, keywordCount: 1, numericRatio: 0, hasPort: 1,
-      subdomainDepth: 0, encodedChars: 1, cyrillicChars: 0,
-      brandSpoof: 0, isTrusted: 0, domainLength: 1,
+      urlLength: 1, domainLength: 1, isHttps: 0, atSymbol: 1, isIp: 0,
+      suspiciousTld: 1, isShortener: 0, hasPort: 1, subdomainDepth: 0,
+      dotCount: 0, dashCount: 0, numericRatio: 0, encodedChars: 1,
+      cyrillicChars: 0, brandSpoof: 0, isTrusted: 0,
+      pathLength: 1, pathSegmentCount: 1, maxPathSegmentEntropy: 1,
+      meanPathSegmentEntropy: 1, pathNumericRatio: 1, pathSpecialCharRatio: 1,
+      pathSuspiciousKwCount: 1, lastSegmentGibberish: 1, tldInPath: 1,
+      queryParamCount: 1, doubleSlashInPath: 1, repeatedCharsInPath: 1,
+      domainPathRatio: 1,
     };
   }
 
   const hostname = u.hostname.toLowerCase();
-  const parts = hostname.split('.');
-  const tld = parts[parts.length - 1];
-  const regDomain = parts.length >= 2 ? parts.slice(-2).join('.') : hostname;
-  const path = u.pathname + u.search;
+  const hostParts = hostname.split('.');
+  const tld = hostParts[hostParts.length - 1];
+  const regDomain = hostParts.length >= 2 ? hostParts.slice(-2).join('.') : hostname;
+  const pathname = u.pathname;
+  const query = u.search;
 
+  // Domain features
   const brands = ['paypal','facebook','instagram','twitter','linkedin',
-                  'whatsapp','amazon','apple','microsoft','google','netflix'];
+    'whatsapp','amazon','apple','microsoft','google','netflix'];
   const hasSpoof = brands.some(b =>
     hostname.includes(b) && !hostname.endsWith('.' + b) && !hostname.startsWith(b + '.')
   );
 
+  // Path features
+  const segments = pathname.split('/').filter(Boolean);
+  const entropies = segments.map(s => shannonEntropy(s));
+  const maxEntropy = entropies.length > 0 ? Math.max(...entropies) : 0;
+  const meanEntropy = entropies.length > 0
+    ? entropies.reduce((a, b) => a + b, 0) / entropies.length
+    : 0;
+  const pathDigits = (pathname.match(/\d/g) || []).length;
+  const pathNumericRatio = pathname.length > 0 ? pathDigits / pathname.length : 0;
+  const specialChars = (pathname.match(/[^a-zA-Z0-9/]/g) || []).length;
+  const pathSpecialCharRatio = pathname.length > 0 ? specialChars / pathname.length : 0;
+  const hasTldInPath = segments.some(seg => {
+    const segLower = seg.toLowerCase();
+    return COMMON_TLDS.has(segLower) || [...COMMON_TLDS].some(t => segLower.endsWith('.' + t));
+  }) ? 1 : 0;
+  const kwInPath = PHISHING_PATH_KW.filter(kw => pathname.toLowerCase().includes(kw)).length;
+  const lastSeg = segments[segments.length - 1] || '';
+  const lastSegGibberish = lastSeg ? (isGibberish(lastSeg) || looksLikeBase64(lastSeg) ? 1 : 0) : 0;
+  const queryParams = query.length > 1 ? query.slice(1).split('&').length : 0;
+  const domainPathRatio = hostname.length > 0 ? Math.min(pathname.length / hostname.length, 1) : 0;
+
   return {
     urlLength: Math.min(url.length / 200, 1),
-    dotCount: Math.min((hostname.match(/\./g) || []).length / 6, 1),
-    dashCount: Math.min((hostname.match(/-/g) || []).length / 5, 1),
-    atSymbol: url.includes('@') ? 1 : 0,
+    domainLength: Math.min(hostname.length / 60, 1),
     isHttps: u.protocol === 'https:' ? 1 : 0,
+    atSymbol: url.includes('@') ? 1 : 0,
     isIp: /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname) ? 1 : 0,
     suspiciousTld: SUSPICIOUS_TLDS.has(tld) ? 1 : 0,
     isShortener: SHORTENERS.has(regDomain) ? 1 : 0,
-    pathLength: Math.min(path.length / 300, 1),
-    keywordCount: Math.min(
-      PHISHING_KW.filter(kw => path.toLowerCase().includes(kw) || hostname.includes(kw)).length / 5,
-      1
-    ),
-    numericRatio: (hostname.match(/\d/g) || []).length / Math.max(hostname.length, 1),
     hasPort: u.port ? 1 : 0,
-    subdomainDepth: Math.min(Math.max(parts.length - 2, 0) / 4, 1),
+    subdomainDepth: Math.min(Math.max(hostParts.length - 2, 0) / 4, 1),
+    dotCount: Math.min((hostname.match(/\./g) || []).length / 6, 1),
+    dashCount: Math.min((hostname.match(/-/g) || []).length / 5, 1),
+    numericRatio: (hostname.match(/\d/g) || []).length / Math.max(hostname.length, 1),
     encodedChars: /%[0-9a-fA-F]{2}/.test(hostname) ? 1 : 0,
     cyrillicChars: /[а-яА-Я]/.test(hostname) ? 1 : 0,
     brandSpoof: hasSpoof ? 1 : 0,
     isTrusted: TRUSTED_DOMAINS.has(hostname) ? 1 : 0,
-    domainLength: Math.min(hostname.length / 60, 1),
+
+    // Path
+    pathLength: Math.min((pathname + query).length / 300, 1),
+    pathSegmentCount: Math.min(segments.length / 8, 1),
+    maxPathSegmentEntropy: Math.min(maxEntropy, 1),
+    meanPathSegmentEntropy: Math.min(meanEntropy, 1),
+    pathNumericRatio: pathNumericRatio,
+    pathSpecialCharRatio: Math.min(pathSpecialCharRatio / 0.5, 1),
+    pathSuspiciousKwCount: Math.min(kwInPath / 4, 1),
+    lastSegmentGibberish: lastSegGibberish,
+    tldInPath: hasTldInPath,
+    queryParamCount: Math.min(queryParams / 8, 1),
+    doubleSlashInPath: pathname.includes('//') ? 1 : 0,
+    repeatedCharsInPath: segments.some(s => hasRepeatedRun(s)) ? 1 : 0,
+    domainPathRatio: domainPathRatio,
   };
 }
 
+const FEATURE_COUNT = 29;
 const LABEL_MAP = { safe: 0, suspicious: 1, unsafe: 2, '0': 0, '1': 1, '2': 2 };
 
 function oneHot(label, numClasses = 3) {
@@ -124,10 +197,10 @@ async function loadCSV(filePath, maxSamples = Infinity) {
     if (header) { header = false; continue; }
     if (!line.trim()) continue;
 
-    const parts = line.split(',');
-    const url = parts[0]?.trim();
-    const label = parts.slice(1).join(',').trim();
-
+    // url,label — handle commas in URLs
+    const idx = line.lastIndexOf(',');
+    const url = line.slice(0, idx)?.trim();
+    const label = line.slice(idx + 1)?.trim();
     if (!url || !label) { skipped++; continue; }
 
     const features = extractFeatures(url);
@@ -145,60 +218,86 @@ async function loadCSV(filePath, maxSamples = Infinity) {
 
 function randomBetween(a, b) { return a + Math.random() * (b - a); }
 
+function syntheticLabel(f) {
+  if (f.isIp === 1)            return [0, 0, 1];
+  if (f.cyrillicChars === 1)   return [0, 0, 1];
+  if (f.brandSpoof === 1)      return [0, 0, 1];
+  if (f.atSymbol === 1)        return [0, 0, 1];
+  if (f.lastSegmentGibberish === 1) return [0, 0, 1];
+  if (f.isShortener === 1)     return [0, 0, 1];
+  if (f.isTrusted === 1)       return [1, 0, 0];
+
+  const risk =
+    f.suspiciousTld          * 0.20 +
+    f.dotCount               * 0.08 +
+    f.pathSuspiciousKwCount  * 0.15 +
+    (1 - f.isHttps)          * 0.08 +
+    f.hasPort                * 0.05 +
+    f.maxPathSegmentEntropy  * 0.15 +
+    f.tldInPath              * 0.10 +
+    f.doubleSlashInPath      * 0.08 +
+    f.repeatedCharsInPath    * 0.05 +
+    f.domainPathRatio        * 0.05 +
+    f.queryParamCount        * 0.05 +
+    f.pathSpecialCharRatio   * 0.03;
+
+  if (risk >= 0.45) return [0, 0, 1];
+  if (risk >= 0.20) return [0, 1, 0];
+  return [1, 0, 0];
+}
+
 function generateSyntheticSamples(n) {
   const xs = [];
   const ys = [];
 
   for (let i = 0; i < n; i++) {
-    const isTrusted = Math.random() < 0.2 ? 1 : 0;
-    const isIp = !isTrusted && Math.random() < 0.05 ? 1 : 0;
-    const spoof = !isTrusted && !isIp && Math.random() < 0.08 ? 1 : 0;
+    const isTrusted = Math.random() < 0.15 ? 1 : 0;
+    const isIp = !isTrusted && Math.random() < 0.03 ? 1 : 0;
+    const spoof = !isTrusted && !isIp && Math.random() < 0.06 ? 1 : 0;
+    const highEntropyPath = !isTrusted && !isIp && !spoof && Math.random() < 0.15 ? 1 : 0;
 
     const f = {
       urlLength: randomBetween(0.05, isTrusted ? 0.3 : 0.9),
-      dotCount: randomBetween(0, isTrusted ? 0.3 : 0.8),
-      dashCount: randomBetween(0, 0.5),
-      atSymbol: Math.random() < 0.03 ? 1 : 0,
+      domainLength: randomBetween(0.05, isTrusted ? 0.3 : 0.8),
       isHttps: isTrusted ? 1 : (Math.random() < 0.6 ? 1 : 0),
+      atSymbol: Math.random() < 0.02 ? 1 : 0,
       isIp,
-      suspiciousTld: !isTrusted && Math.random() < 0.15 ? 1 : 0,
-      isShortener: !isTrusted && Math.random() < 0.1 ? 1 : 0,
-      pathLength: randomBetween(0, 0.7),
-      keywordCount: !isTrusted ? randomBetween(0, 0.6) : 0,
-      numericRatio: randomBetween(0, 0.3),
-      hasPort: Math.random() < 0.05 ? 1 : 0,
-      subdomainDepth: randomBetween(0, isTrusted ? 0.25 : 0.75),
-      encodedChars: !isTrusted && Math.random() < 0.1 ? 1 : 0,
-      cyrillicChars: !isTrusted && Math.random() < 0.04 ? 1 : 0,
+      suspiciousTld: !isTrusted && Math.random() < 0.12 ? 1 : 0,
+      isShortener: !isTrusted && Math.random() < 0.08 ? 1 : 0,
+      hasPort: Math.random() < 0.04 ? 1 : 0,
+      subdomainDepth: randomBetween(0, isTrusted ? 0.2 : 0.6),
+      dotCount: randomBetween(0, isTrusted ? 0.25 : 0.7),
+      dashCount: randomBetween(0, 0.4),
+      numericRatio: randomBetween(0, isTrusted ? 0.2 : 0.4),
+      encodedChars: !isTrusted && Math.random() < 0.08 ? 1 : 0,
+      cyrillicChars: !isTrusted && Math.random() < 0.03 ? 1 : 0,
       brandSpoof: spoof ? 1 : 0,
       isTrusted,
-      domainLength: randomBetween(0, isTrusted ? 0.4 : 0.9),
+      pathLength: randomBetween(0, isTrusted ? 0.3 : 0.8),
+      pathSegmentCount: randomBetween(0, isTrusted ? 0.25 : 0.75),
+      maxPathSegmentEntropy: highEntropyPath ? randomBetween(0.6, 1) : randomBetween(0, 0.4),
+      meanPathSegmentEntropy: highEntropyPath ? randomBetween(0.4, 0.8) : randomBetween(0, 0.3),
+      pathNumericRatio: randomBetween(0, 0.4),
+      pathSpecialCharRatio: randomBetween(0, highEntropyPath ? 0.4 : 0.15),
+      pathSuspiciousKwCount: !isTrusted ? randomBetween(0, 0.6) : 0,
+      lastSegmentGibberish: highEntropyPath ? 1 : 0,
+      tldInPath: !isTrusted && Math.random() < 0.05 ? 1 : 0,
+      queryParamCount: randomBetween(0, isTrusted ? 0.15 : 0.5),
+      doubleSlashInPath: !isTrusted && Math.random() < 0.05 ? 1 : 0,
+      repeatedCharsInPath: !isTrusted && Math.random() < 0.04 ? 1 : 0,
+      domainPathRatio: randomBetween(0, isTrusted ? 0.3 : 0.8),
     };
 
-    // Label via same rule as mlService.ts
-    let label;
-    if (isTrusted) label = [1, 0, 0];
-    else if (isIp || spoof || f.atSymbol || f.cyrillicChars) label = [0, 0, 1];
-    else {
-      const risk =
-        f.suspiciousTld * 0.25 + f.isShortener * 0.15 + f.dotCount * 0.15 +
-        f.keywordCount * 0.20 + f.pathLength * 0.10 + f.encodedChars * 0.10 +
-        (1 - f.isHttps) * 0.15 + f.hasPort * 0.10;
-      if (risk >= 0.45) label = [0, 0, 1];
-      else if (risk >= 0.20) label = [0, 1, 0];
-      else label = [1, 0, 0];
-    }
-
     xs.push(Object.values(f));
-    ys.push(label);
+    ys.push(syntheticLabel(f));
   }
   return { xs, ys };
 }
 
-// ─── Model definition ─────────────────────────────────────────────────────────
+// ─── Model definition (29-input) ─────────────────────────────────────────────
 
 function buildModel() {
-  const input = tf.input({ shape: [18] });
+  const input = tf.input({ shape: [FEATURE_COUNT] });
 
   const x = tf.layers.dense({ units: 128, kernelInitializer: 'glorotUniform' }).apply(input);
   const b1 = tf.layers.batchNormalization().apply(x);
@@ -249,9 +348,9 @@ async function main() {
 
   console.log('╔══════════════════════════════════════════╗');
   console.log('║   Campus Shield — TF.js Model Trainer   ║');
+  console.log('║        (29-feature deep model)           ║');
   console.log('╚══════════════════════════════════════════╝\n');
 
-  // Load data
   let xs, ys;
   if (dataPath) {
     const fullPath = path.resolve(dataPath);
@@ -277,7 +376,6 @@ async function main() {
     console.log(`   Samples: ${xs.length} (synthetic)`);
   }
 
-  // Count class distribution
   const dist = [0, 0, 0];
   for (const y of ys) {
     const idx = y.indexOf(1);
@@ -285,12 +383,10 @@ async function main() {
   }
   console.log(`   Class distribution — SAFE: ${dist[0]}, SUSPICIOUS: ${dist[1]}, UNSAFE: ${dist[2]}`);
 
-  // Build model
-  console.log('\n🏗️  Building deep model (128→64→32→3)...');
+  console.log('\n🏗️  Building deep model (128→64→32→3 x 29 features)...');
   const model = buildModel();
   model.summary();
 
-  // Train
   const xTensor = tf.tensor2d(xs);
   const yTensor = tf.tensor2d(ys);
 
@@ -308,7 +404,6 @@ async function main() {
   xTensor.dispose();
   yTensor.dispose();
 
-  // Final metrics
   const finalLoss = history.history.loss.at(-1).toFixed(4);
   const finalAcc = (history.history.acc.at(-1) * 100).toFixed(2);
   const valLoss = history.history.val_loss.at(-1).toFixed(4);
@@ -318,7 +413,7 @@ async function main() {
   console.log(`   Train Loss: ${finalLoss} | Train Acc: ${finalAcc}%`);
   console.log(`   Val Loss:   ${valLoss} | Val Acc:   ${valAcc}%`);
 
-  // Save model manually (no native deps needed)
+  // Save
   fs.mkdirSync(outputDir, { recursive: true });
 
   const topology = model.toJSON();
@@ -330,11 +425,8 @@ async function main() {
     dtype: t.dtype,
   }));
 
-  // Collect all weight buffers into one shard
   const chunks = weightData.map(d => Buffer.from(d.buffer));
   const shardBuffer = Buffer.concat(chunks);
-
-  // Offsets for each weight within the shard
   let offset = 0;
   const weightOffsets = chunks.map(c => {
     const off = offset;
@@ -342,7 +434,7 @@ async function main() {
     return off;
   });
 
-  const modelJson = {
+  fs.writeFileSync(path.join(outputDir, 'model.json'), JSON.stringify({
     modelTopology: topology,
     weightsManifest: [{
       paths: ['group1-shard1of1.bin'],
@@ -354,21 +446,15 @@ async function main() {
         size: chunks[i].length,
       })),
     }],
-  };
-
-  fs.writeFileSync(
-    path.join(outputDir, 'model.json'),
-    JSON.stringify(modelJson, null, 2)
-  );
+  }, null, 2));
   fs.writeFileSync(path.join(outputDir, 'group1-shard1of1.bin'), shardBuffer);
 
-  // Clean up tensors
   weightTensors.forEach(t => t.dispose());
 
   console.log(`\n💾 Model saved to: ${outputDir}/`);
   console.log(`   ├─ model.json`);
   console.log(`   └─ group1-shard1of1.bin`);
-  console.log(`\n✅ Done! Deploy the 'public/tfjs_model/' folder with your app.`);
+  console.log(`\n✅ Done!`);
 
   tf.disposeVariables();
 }

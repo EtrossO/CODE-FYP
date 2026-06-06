@@ -1,7 +1,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { SafetyStatusValues, type SafetyStatus } from "../types";
 import { checkUrlSafeBrowsing } from "./safeBrowsingService";
-import { classifyUrl } from "./mlService"; // ← NEW
+import { classifyUrl } from "./mlService";
+import { pathHeuristics, normalizeUrl } from "./features";
 
 const apiKey = import.meta.env.VITE_API_KEY;
 if (!apiKey) {
@@ -83,13 +84,6 @@ function countDots(s: string): number {
   return (s.match(/\./g) || []).length;
 }
 
-function normalizeUrl(raw: string): string {
-  const s = raw.trim();
-  if (/^https?:\/\//i.test(s)) return s;
-  if (s.startsWith('//')) return `https:${s}`;
-  return `https://${s}`;
-}
-
 function preCheck(url: string): PreCheckResult {
   let u: URL;
   try {
@@ -101,9 +95,7 @@ function preCheck(url: string): PreCheckResult {
   const hostname = u.hostname.toLowerCase();
   const path     = u.pathname + u.search;
 
-  if (TRUSTED_DOMAINS.has(hostname)) {
-    return { status: SafetyStatusValues.SAFE, reason: '' };
-  }
+  // ── Domain-level checks (unchanged) ──────────────────────────────────────
 
   if (!u.protocol.startsWith('https')) {
     return { status: SafetyStatusValues.SUSPICIOUS,
@@ -178,6 +170,39 @@ function preCheck(url: string): PreCheckResult {
       reason: 'Domain appears to be impersonating a well-known brand using a subdomain trick.' };
   }
 
+  // ── Path-level heuristics (NEW) ──────────────────────────────────────────
+  // Run path analysis on every URL, even whitelisted domains.
+  const heuristic = pathHeuristics(u);
+
+  // Strong path signals override domain safety
+  if (heuristic.isMalicious) {
+    return {
+      status: SafetyStatusValues.UNSAFE,
+      reason: heuristic.reasons[0] || 'URL path contains strong phishing indicators.',
+    };
+  }
+
+  // Even whitelisted domains get downgraded if path is suspicious
+  if (heuristic.isSuspicious && TRUSTED_DOMAINS.has(hostname)) {
+    return {
+      status: SafetyStatusValues.SUSPICIOUS,
+      reason: `The domain "${hostname}" is recognised, but the path looks suspicious: ${heuristic.reasons[0]}`,
+    };
+  }
+
+  // Whitelisted domain with clean path is SAFE
+  if (TRUSTED_DOMAINS.has(hostname)) {
+    return { status: SafetyStatusValues.SAFE, reason: '' };
+  }
+
+  // Suspicious path on non-whitelisted domain
+  if (heuristic.isSuspicious) {
+    return {
+      status: SafetyStatusValues.SUSPICIOUS,
+      reason: heuristic.reasons[0] || 'URL path appears suspicious.',
+    };
+  }
+
   return { status: null, reason: '' };
 }
 
@@ -218,14 +243,17 @@ export const analyzeLinkSafety = async (url: string): Promise<{
     return result;
   }
 
-  // ── Stage 2: TF.js ML classifier (NEW) ───────────────────────────────────
-  // Only runs when heuristics returned null (inconclusive).
+  // ── Stage 2: TF.js ML classifier ──────────────────────────────────────────
   try {
     const ml = await classifyUrl(url);
     console.log(`🤖 ML result: ${ml.label} (confidence: ${(ml.confidence * 100).toFixed(1)}%)`);
 
     if (ml.isHighConfidence) {
-      if (ml.label === 'SAFE') {
+      // If heuristics found path issues, don't let ML override to SAFE
+      if (ml.label === 'SAFE' && pre.status === SafetyStatusValues.SUSPICIOUS) {
+        // Heuristic flagged something — keep it at SUSPICIOUS, don't downgrade
+        console.log('⚠️ Heuristic flagged path issues; overriding ML SAFE → SUSPICIOUS');
+      } else if (ml.label === 'SAFE') {
         const result = {
           status: SafetyStatusValues.SAFE,
           reason: `AI classifier assessed this URL as safe (${(ml.confidence * 100).toFixed(0)}% confidence). No threat indicators found.`,
@@ -246,12 +274,9 @@ export const analyzeLinkSafety = async (url: string): Promise<{
         resultCache.set(url, result);
         return result;
       }
-      // SUSPICIOUS high-confidence → fall through to Safe Browsing for confirmation
     }
-    // Low confidence → fall through to next stage
   } catch (mlErr) {
     console.warn('⚠️ ML classifier error (non-fatal):', mlErr);
-    // Non-fatal — continue to next stage
   }
 
   // ── Stage 3: Google Safe Browsing ────────────────────────────────────────

@@ -1,5 +1,5 @@
 {
-  "modelTopology": "{\"class_name\":\"Model\",\"config\":{\"name\":\"model1\",\"layers\":[{\"name\":\"input1\",\"class_name\":\"InputLayer\",\"config\":{\"batch_input_shape\":[null,18],\"dtype\":\"float32\",\"sparse\":false,\"name\":\"input1\"},\"inbound_nodes\":[]},{\"name\":\"dense_Dense1\",\"class_name\":\"Dense\",\"config\":{\"units\":128,\"activation\":\"linear\",\"use_bias\":true,\"kernel_initializer\":{\"class_name\":\"VarianceScaling\",\"config\":{\"scale\":1,\"mode\":\"fan_avg\",\"distribution\":\"uniform\",\"seed\":null}},\"bias_initializer\":{\"class_name\":\"Zeros\",\"config\":{}},\"kernel_regularizer\":null,\"bias_regularizer\":null,\"activity_regularizer\":null,\"kernel_constraint\":null,\"bias_constraint\":null,\"name\":\"dense_Dense1\",\"trainable\":true},\"inbound_nodes\":[[[\"input1\",0,0,{}]]]},{\"name\":\"batch_normalization_BatchNormalization1\",\"class_name\":\"BatchNormalization\",\"config\":{\"axis\":-1,\"momentum\":0.99,\"epsilon\":0.001,\"center\":true,\"scale\":true,\"beta_initializer\":{\"class_name\":\"Zeros\",\"config\":{}},\"gamma_initializer\":{\"class_name\":\"Ones\",\"config\":{}},\"moving_mean_initializer\":{\"class_name\":\"Zeros\",\"config\":{}},\"moving_variance_initializer\":{\"class_name\":\"Ones\",\"config\":{}},\"beta_regularizer\":null,\"gamma_regularizer\":null,\"beta_constraint\":null,\"gamma_constraint\":null,\"name\":\"batch_normalization_BatchNormalization1\",\"trainable\":true},\"inbound_nodes\":[[[\"dense_Dense1\",0,0,{}]]]},{\"name\":\"leaky_re_lu_LeakyReLU1\",\"class_name\":\"LeakyReLU\",\"config\":{\"alpha\":0.1,\"name\":\"leaky_re_lu_LeakyReLU1\",\"trainable\":true},\"inbound_nodes\":[[[\"batch_normalization_BatchNormalization1\",0,0,{}]]]},{\"name\":\"dropout_Dropout1\",\"class_name\":\"Dropout\",\"config\":{\"rate\":0.3,\"noise_shape\":null,\"seed\":null,\"name\":\"dropout_Dropout1\",\"trainable\":true},\"inbound_nodes\":[[[\"leaky_re_lu_LeakyReLU1\",0,0,{}]]]},{\"name\":\"dense_Dense2\",\"class_name\":\"Dense\",\"config\":{\"units\":64,\"activation\":\"linear\",\"use_bias\":true,\"kernel_initializer\":{\"class_name\":\"VarianceScaling\",\"config\":{\"scale\":1,\"mode\":\"fan_avg\",\"distribution\":\"uniform\",\"seed\":null}},\"bias_initializer\":{\"class_name\":\"Zeros\",\"config\":{}},\"kernel_regularizer\":null,\"bias_regularizer\":null,\"activity_regularizer\":null,\"kernel_constraint\":null,\"bias_constraint\":null,\"name\":\"dense_Dense2\",\"trainable\":true},\"inbound_nodes\":[[[\"dropout_Dropout1\",0,0,{}]]]},{\"name\":\"batch_normalization_BatchNormalization2\",\"class_name\":\"BatchNormalization\",\"config\":{\"axis\":-1,\"momentum\":0.99,\"epsilon\":0.001,\"center\":true,\"scale\":true,\"beta_initializer\":{\"class_name\":\"Zeros\",\"config\":{}},\"gamma_initializer\":{\"class_name\":\"Ones\",\"config\":{}},\"moving_mean_initializer\":{\"class_name\":\"Zeros\",\"config\":{}},\"moving_variance_initializer\":{\"class_name\":\"Ones\",\"config\":{}},\"beta_regularizer\":null,\"gamma_regularizer\":null,\"beta_constraint\":null,\"gamma_constraint\":null,\"name\":\"batch_normalization_BatchNormalization2\",\"trainable\":true},\"inbound_nodes\":[[[\"dense_Dense2\",0,0,{}]]]},{\"name\":\"leaky_re_lu_LeakyReLU2\",\"class_name\":\"LeakyReLU\",\"config\":{\"alpha\":0.1,\"name\":\"leaky_re_lu_LeakyReLU2\",\"trainable\":true},\"inbound_nodes\":[[[\"batch_normalization_BatchNormalization2\",0,0,{}]]]},{\"name\":\"dropout_Dropout2\",\"class_name\":\"Dropout\",\"config\":{\"rate\":0.3,\"noise_shape\":null,\"seed\":null,\"name\":\"dropout_Dropout2\",\"trainable\":true},\"inbound_nodes\":[[[\"leaky_re_lu_LeakyReLU2\",0,0,{}]]]},{\"name\":\"dense_Dense3\",\"class_name\":\"Dense\",\"config\":{\"units\":32,\"activation\":\"linear\",\"use_bias\":true,\"kernel_initializer\":{\"class_name\":\"VarianceScaling\",\"config\":{\"scale\":1,\"mode\":\"fan_avg\",\"distribution\":\"uniform\",\"seed\":null}},\"bias_initializer\":{\"class_name\":\"Zeros\",\"config\":{}},\"kernel_regularizer\":null,\"bias_regularizer\":null,\"activity_regularizer\":null,\"kernel_constraint\":null,\"bias_constraint\":null,\"name\":\"dense_Dense3\",\"trainable\":true},\"inbound_nodes\":[[[\"dropout_Dropout2\",0,0,{}]]]},{\"name\":\"batch_normalization_BatchNormalization3\",\"class_name\":\"BatchNormalization\",\"config\":{\"axis\":-1,\"momentum\":0.99,\"epsilon\":0.001,\"center\":true,\"scale\":true,\"beta_initializer\":{\"class_name\":\"Zeros\",\"config\":{}},\"gamma_initializer\":{\"class_name\":\"Ones\",\"config\":{}},\"moving_mean_initializer\":{\"class_name\":\"Zeros\",\"config\":{}},\"moving_variance_initializer\":{\"class_name\":\"Ones\",\"config\":{}},\"beta_regularizer\":null,\"gamma_regularizer\":null,\"beta_constraint\":null,\"gamma_constraint\":null,\"name\":\"batch_normalization_BatchNormalization3\",\"trainable\":true},\"inbound_nodes\":[[[\"dense_Dense3\",0,0,{}]]]},{\"name\":\"leaky_re_lu_LeakyReLU3\",\"class_name\":\"LeakyReLU\",\"config\":{\"alpha\":0.1,\"name\":\"leaky_re_lu_LeakyReLU3\",\"trainable\":true},\"inbound_nodes\":[[[\"batch_normalization_BatchNormalization3\",0,0,{}]]]},{\"name\":\"dropout_Dropout3\",\"class_name\":\"Dropout\",\"config\":{\"rate\":0.2,\"noise_shape\":null,\"seed\":null,\"name\":\"dropout_Dropout3\",\"trainable\":true},\"inbound_nodes\":[[[\"leaky_re_lu_LeakyReLU3\",0,0,{}]]]},{\"name\":\"dense_Dense4\",\"class_name\":\"Dense\",\"config\":{\"units\":3,\"activation\":\"softmax\",\"use_bias\":true,\"kernel_initializer\":{\"class_name\":\"VarianceScaling\",\"config\":{\"scale\":1,\"mode\":\"fan_avg\",\"distribution\":\"normal\",\"seed\":null}},\"bias_initializer\":{\"class_name\":\"Zeros\",\"config\":{}},\"kernel_regularizer\":null,\"bias_regularizer\":null,\"activity_regularizer\":null,\"kernel_constraint\":null,\"bias_constraint\":null,\"name\":\"dense_Dense4\",\"trainable\":true},\"inbound_nodes\":[[[\"dropout_Dropout3\",0,0,{}]]]}],\"input_layers\":[[\"input1\",0,0]],\"output_layers\":[[\"dense_Dense4\",0,0]]},\"keras_version\":\"tfjs-layers 4.22.0\",\"backend\":\"tensor_flow.js\"}",
+  "modelTopology": "{\"class_name\":\"Model\",\"config\":{\"name\":\"model1\",\"layers\":[{\"name\":\"input1\",\"class_name\":\"InputLayer\",\"config\":{\"batch_input_shape\":[null,29],\"dtype\":\"float32\",\"sparse\":false,\"name\":\"input1\"},\"inbound_nodes\":[]},{\"name\":\"dense_Dense1\",\"class_name\":\"Dense\",\"config\":{\"units\":128,\"activation\":\"linear\",\"use_bias\":true,\"kernel_initializer\":{\"class_name\":\"VarianceScaling\",\"config\":{\"scale\":1,\"mode\":\"fan_avg\",\"distribution\":\"uniform\",\"seed\":null}},\"bias_initializer\":{\"class_name\":\"Zeros\",\"config\":{}},\"kernel_regularizer\":null,\"bias_regularizer\":null,\"activity_regularizer\":null,\"kernel_constraint\":null,\"bias_constraint\":null,\"name\":\"dense_Dense1\",\"trainable\":true},\"inbound_nodes\":[[[\"input1\",0,0,{}]]]},{\"name\":\"batch_normalization_BatchNormalization1\",\"class_name\":\"BatchNormalization\",\"config\":{\"axis\":-1,\"momentum\":0.99,\"epsilon\":0.001,\"center\":true,\"scale\":true,\"beta_initializer\":{\"class_name\":\"Zeros\",\"config\":{}},\"gamma_initializer\":{\"class_name\":\"Ones\",\"config\":{}},\"moving_mean_initializer\":{\"class_name\":\"Zeros\",\"config\":{}},\"moving_variance_initializer\":{\"class_name\":\"Ones\",\"config\":{}},\"beta_regularizer\":null,\"gamma_regularizer\":null,\"beta_constraint\":null,\"gamma_constraint\":null,\"name\":\"batch_normalization_BatchNormalization1\",\"trainable\":true},\"inbound_nodes\":[[[\"dense_Dense1\",0,0,{}]]]},{\"name\":\"leaky_re_lu_LeakyReLU1\",\"class_name\":\"LeakyReLU\",\"config\":{\"alpha\":0.1,\"name\":\"leaky_re_lu_LeakyReLU1\",\"trainable\":true},\"inbound_nodes\":[[[\"batch_normalization_BatchNormalization1\",0,0,{}]]]},{\"name\":\"dropout_Dropout1\",\"class_name\":\"Dropout\",\"config\":{\"rate\":0.3,\"noise_shape\":null,\"seed\":null,\"name\":\"dropout_Dropout1\",\"trainable\":true},\"inbound_nodes\":[[[\"leaky_re_lu_LeakyReLU1\",0,0,{}]]]},{\"name\":\"dense_Dense2\",\"class_name\":\"Dense\",\"config\":{\"units\":64,\"activation\":\"linear\",\"use_bias\":true,\"kernel_initializer\":{\"class_name\":\"VarianceScaling\",\"config\":{\"scale\":1,\"mode\":\"fan_avg\",\"distribution\":\"uniform\",\"seed\":null}},\"bias_initializer\":{\"class_name\":\"Zeros\",\"config\":{}},\"kernel_regularizer\":null,\"bias_regularizer\":null,\"activity_regularizer\":null,\"kernel_constraint\":null,\"bias_constraint\":null,\"name\":\"dense_Dense2\",\"trainable\":true},\"inbound_nodes\":[[[\"dropout_Dropout1\",0,0,{}]]]},{\"name\":\"batch_normalization_BatchNormalization2\",\"class_name\":\"BatchNormalization\",\"config\":{\"axis\":-1,\"momentum\":0.99,\"epsilon\":0.001,\"center\":true,\"scale\":true,\"beta_initializer\":{\"class_name\":\"Zeros\",\"config\":{}},\"gamma_initializer\":{\"class_name\":\"Ones\",\"config\":{}},\"moving_mean_initializer\":{\"class_name\":\"Zeros\",\"config\":{}},\"moving_variance_initializer\":{\"class_name\":\"Ones\",\"config\":{}},\"beta_regularizer\":null,\"gamma_regularizer\":null,\"beta_constraint\":null,\"gamma_constraint\":null,\"name\":\"batch_normalization_BatchNormalization2\",\"trainable\":true},\"inbound_nodes\":[[[\"dense_Dense2\",0,0,{}]]]},{\"name\":\"leaky_re_lu_LeakyReLU2\",\"class_name\":\"LeakyReLU\",\"config\":{\"alpha\":0.1,\"name\":\"leaky_re_lu_LeakyReLU2\",\"trainable\":true},\"inbound_nodes\":[[[\"batch_normalization_BatchNormalization2\",0,0,{}]]]},{\"name\":\"dropout_Dropout2\",\"class_name\":\"Dropout\",\"config\":{\"rate\":0.3,\"noise_shape\":null,\"seed\":null,\"name\":\"dropout_Dropout2\",\"trainable\":true},\"inbound_nodes\":[[[\"leaky_re_lu_LeakyReLU2\",0,0,{}]]]},{\"name\":\"dense_Dense3\",\"class_name\":\"Dense\",\"config\":{\"units\":32,\"activation\":\"linear\",\"use_bias\":true,\"kernel_initializer\":{\"class_name\":\"VarianceScaling\",\"config\":{\"scale\":1,\"mode\":\"fan_avg\",\"distribution\":\"uniform\",\"seed\":null}},\"bias_initializer\":{\"class_name\":\"Zeros\",\"config\":{}},\"kernel_regularizer\":null,\"bias_regularizer\":null,\"activity_regularizer\":null,\"kernel_constraint\":null,\"bias_constraint\":null,\"name\":\"dense_Dense3\",\"trainable\":true},\"inbound_nodes\":[[[\"dropout_Dropout2\",0,0,{}]]]},{\"name\":\"batch_normalization_BatchNormalization3\",\"class_name\":\"BatchNormalization\",\"config\":{\"axis\":-1,\"momentum\":0.99,\"epsilon\":0.001,\"center\":true,\"scale\":true,\"beta_initializer\":{\"class_name\":\"Zeros\",\"config\":{}},\"gamma_initializer\":{\"class_name\":\"Ones\",\"config\":{}},\"moving_mean_initializer\":{\"class_name\":\"Zeros\",\"config\":{}},\"moving_variance_initializer\":{\"class_name\":\"Ones\",\"config\":{}},\"beta_regularizer\":null,\"gamma_regularizer\":null,\"beta_constraint\":null,\"gamma_constraint\":null,\"name\":\"batch_normalization_BatchNormalization3\",\"trainable\":true},\"inbound_nodes\":[[[\"dense_Dense3\",0,0,{}]]]},{\"name\":\"leaky_re_lu_LeakyReLU3\",\"class_name\":\"LeakyReLU\",\"config\":{\"alpha\":0.1,\"name\":\"leaky_re_lu_LeakyReLU3\",\"trainable\":true},\"inbound_nodes\":[[[\"batch_normalization_BatchNormalization3\",0,0,{}]]]},{\"name\":\"dropout_Dropout3\",\"class_name\":\"Dropout\",\"config\":{\"rate\":0.2,\"noise_shape\":null,\"seed\":null,\"name\":\"dropout_Dropout3\",\"trainable\":true},\"inbound_nodes\":[[[\"leaky_re_lu_LeakyReLU3\",0,0,{}]]]},{\"name\":\"dense_Dense4\",\"class_name\":\"Dense\",\"config\":{\"units\":3,\"activation\":\"softmax\",\"use_bias\":true,\"kernel_initializer\":{\"class_name\":\"VarianceScaling\",\"config\":{\"scale\":1,\"mode\":\"fan_avg\",\"distribution\":\"normal\",\"seed\":null}},\"bias_initializer\":{\"class_name\":\"Zeros\",\"config\":{}},\"kernel_regularizer\":null,\"bias_regularizer\":null,\"activity_regularizer\":null,\"kernel_constraint\":null,\"bias_constraint\":null,\"name\":\"dense_Dense4\",\"trainable\":true},\"inbound_nodes\":[[[\"dropout_Dropout3\",0,0,{}]]]}],\"input_layers\":[[\"input1\",0,0]],\"output_layers\":[[\"dense_Dense4\",0,0]]},\"keras_version\":\"tfjs-layers 4.22.0\",\"backend\":\"tensor_flow.js\"}",
   "weightsManifest": [
     {
       "paths": [
@@ -9,12 +9,12 @@
         {
           "name": "dense_Dense1_kernel",
           "shape": [
-            18,
+            29,
             128
           ],
           "dtype": "float32",
           "offset": 0,
-          "size": 9216
+          "size": 14848
         },
         {
           "name": "dense_Dense1_bias",
@@ -22,7 +22,7 @@
             128
           ],
           "dtype": "float32",
-          "offset": 9216,
+          "offset": 14848,
           "size": 512
         },
         {
@@ -31,7 +31,7 @@
             128
           ],
           "dtype": "float32",
-          "offset": 9728,
+          "offset": 15360,
           "size": 512
         },
         {
@@ -40,7 +40,7 @@
             128
           ],
           "dtype": "float32",
-          "offset": 10240,
+          "offset": 15872,
           "size": 512
         },
         {
@@ -50,7 +50,7 @@
             64
           ],
           "dtype": "float32",
-          "offset": 10752,
+          "offset": 16384,
           "size": 32768
         },
         {
@@ -59,7 +59,7 @@
             64
           ],
           "dtype": "float32",
-          "offset": 43520,
+          "offset": 49152,
           "size": 256
         },
         {
@@ -68,7 +68,7 @@
             64
           ],
           "dtype": "float32",
-          "offset": 43776,
+          "offset": 49408,
           "size": 256
         },
         {
@@ -77,7 +77,7 @@
             64
           ],
           "dtype": "float32",
-          "offset": 44032,
+          "offset": 49664,
           "size": 256
         },
         {
@@ -87,7 +87,7 @@
             32
           ],
           "dtype": "float32",
-          "offset": 44288,
+          "offset": 49920,
           "size": 8192
         },
         {
@@ -96,7 +96,7 @@
             32
           ],
           "dtype": "float32",
-          "offset": 52480,
+          "offset": 58112,
           "size": 128
         },
         {
@@ -105,7 +105,7 @@
             32
           ],
           "dtype": "float32",
-          "offset": 52608,
+          "offset": 58240,
           "size": 128
         },
         {
@@ -114,7 +114,7 @@
             32
           ],
           "dtype": "float32",
-          "offset": 52736,
+          "offset": 58368,
           "size": 128
         },
         {
@@ -124,7 +124,7 @@
             3
           ],
           "dtype": "float32",
-          "offset": 52864,
+          "offset": 58496,
           "size": 384
         },
         {
@@ -133,7 +133,7 @@
             3
           ],
           "dtype": "float32",
-          "offset": 53248,
+          "offset": 58880,
           "size": 12
         },
         {
@@ -142,7 +142,7 @@
             128
           ],
           "dtype": "float32",
-          "offset": 53260,
+          "offset": 58892,
           "size": 512
         },
         {
@@ -151,7 +151,7 @@
             128
           ],
           "dtype": "float32",
-          "offset": 53772,
+          "offset": 59404,
           "size": 512
         },
         {
@@ -160,7 +160,7 @@
             64
           ],
           "dtype": "float32",
-          "offset": 54284,
+          "offset": 59916,
           "size": 256
         },
         {
@@ -169,7 +169,7 @@
             64
           ],
           "dtype": "float32",
-          "offset": 54540,
+          "offset": 60172,
           "size": 256
         },
         {
@@ -178,7 +178,7 @@
             32
           ],
           "dtype": "float32",
-          "offset": 54796,
+          "offset": 60428,
           "size": 128
         },
         {
@@ -187,7 +187,7 @@
             32
           ],
           "dtype": "float32",
-          "offset": 54924,
+          "offset": 60556,
           "size": 128
         }
       ]
