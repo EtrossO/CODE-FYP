@@ -1,5 +1,5 @@
 import * as tf from '@tensorflow/tfjs';
-import { extractFeatures, type UrlFeatures, FEATURE_COUNT } from './features';
+import { extractFeatures, normalizeUrl, pathHeuristics, type UrlFeatures, FEATURE_COUNT } from './features';
 
 export { extractFeatures } from './features';
 export type { UrlFeatures } from './features';
@@ -89,7 +89,7 @@ function syntheticLabel(f: UrlFeatures): [number, number, number] {
     f.suspiciousTld           * 0.20 +
     f.dotCount                * 0.08 +
     f.pathSuspiciousKwCount   * 0.15 +
-    (1 - f.isHttps)           * 0.08 +
+    (1 - f.isHttps)           * 0.05 +
     f.hasPort                 * 0.05 +
     f.maxPathSegmentEntropy   * 0.15 +
     f.tldInPath               * 0.10 +
@@ -103,6 +103,8 @@ function syntheticLabel(f: UrlFeatures): [number, number, number] {
   if (riskScore >= 0.20) return [0, 1, 0];
   return [1, 0, 0];
 }
+
+
 
 function randomBetween(a: number, b: number) {
   return a + Math.random() * (b - a);
@@ -154,7 +156,6 @@ function generateSyntheticSamples(n: number): { xs: number[][]; ys: number[][] }
     };
 
     xs.push(Object.values(f) as number[]);
-    // Use the same labeling but adding the new features
     ys.push(syntheticLabel(f));
   }
   return { xs, ys };
@@ -203,6 +204,18 @@ export async function classifyUrl(url: string): Promise<MLResult> {
 
   const labels = ['SAFE', 'SUSPICIOUS', 'UNSAFE'] as const;
   const maxIdx = probs.indexOf(Math.max(...probs));
+
+  // Post-ML heuristic override: if path analysis disagrees with ML, prefer heuristics
+  try {
+    const u = new URL(normalizeUrl(url));
+    const heuristic = pathHeuristics(u);
+    if (heuristic.isMalicious) {
+      return { label: 'UNSAFE', confidence: 0.95, isHighConfidence: true };
+    }
+    if (heuristic.isSuspicious && labels[maxIdx] === 'SAFE') {
+      return { label: 'SUSPICIOUS', confidence: probs[maxIdx], isHighConfidence: false };
+    }
+  } catch { /* skip heuristic override on parse failure */ }
 
   return {
     label:            labels[maxIdx],

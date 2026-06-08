@@ -217,7 +217,12 @@ function extractFeatures(url) {
 }
 
 const FEATURE_COUNT = 29;
-const LABEL_MAP = { safe: 0, suspicious: 1, unsafe: 2, '0': 0, '1': 1, '2': 2 };
+const LABEL_MAP = {
+  safe: 0, benign: 0,
+  suspicious: 1, defacement: 1,
+  unsafe: 2, phishing: 2, malware: 2,
+  '0': 0, '1': 1, '2': 2,
+};
 
 function oneHot(label, numClasses = 3) {
   const vec = new Array(numClasses).fill(0);
@@ -244,8 +249,12 @@ async function loadCSV(filePath, maxSamples = Infinity) {
     // url,label — handle commas in URLs
     const idx = line.lastIndexOf(',');
     const url = line.slice(0, idx)?.trim();
-    const label = line.slice(idx + 1)?.trim();
+    const label = line.slice(idx + 1)?.trim()?.toLowerCase();
+    // Skip corrupted rows (binary junk in URL) and unknown labels
     if (!url || !label) { skipped++; continue; }
+    if (LABEL_MAP[label] === undefined) { skipped++; continue; }
+    // Skip rows with non-printable characters (corrupted data)
+    if (/[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(url)) { skipped++; continue; }
 
     const features = extractFeatures(url);
     xs.push(Object.values(features));
@@ -380,6 +389,16 @@ async function main() {
       if (args[raw[i].slice(2)] !== true) i++;
     }
   }
+  // Default to balanced 50k dataset if no data arg provided
+  if (!args.data) {
+    const defaultPath = path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      '..', 'dataset_balanced_9k.csv'
+    );
+    if (fs.existsSync(defaultPath)) {
+      args.data = defaultPath;
+    }
+  }
 
   const dataPath = args.data;
   const outputDir = args.output || path.resolve(
@@ -403,7 +422,8 @@ async function main() {
       process.exit(1);
     }
     console.log(`📂 Loading dataset: ${fullPath}`);
-    const data = await loadCSV(fullPath);
+    const maxSamples = parseInt(args.maxSamples, 10) || Infinity;
+    const data = await loadCSV(fullPath, maxSamples);
     xs = data.xs;
     ys = data.ys;
     if (xs.length === 0) {

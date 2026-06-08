@@ -34,6 +34,19 @@ const SUSPICIOUS_KEYWORDS = [
   'winner','free','urgent','suspended','restrict','unlock','authenticate',
 ];
 
+const OPEN_REDIRECT_PARAMS = new Set([
+  'url','redirect','redirect_uri','redirect_url','next','return',
+  'return_to','return_url','dest','destination','target','to',
+  'login_url','continue','out','view','link','ref','href',
+]);
+
+const BRAND_DOMAINS_FOR_TYPOSQUAT = [
+  'google','youtube','facebook','instagram','linkedin','whatsapp',
+  'amazon','apple','microsoft','netflix','paypal','twitter','x',
+  'github','stackoverflow','wikipedia','spotify','telegram','discord','zoom',
+  'canva','figma','reddit',
+];
+
 const TRUSTED_DOMAINS = new Set([
   'youtube.com','www.youtube.com','m.youtube.com',
   'google.com','goo.gl','www.google.com','mail.google.com','drive.google.com',
@@ -84,6 +97,59 @@ function countDots(s: string): number {
   return (s.match(/\./g) || []).length;
 }
 
+function levenshteinDistance(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+function detectOpenRedirect(u: URL): { hit: boolean; param: string; target: string } | null {
+  const params = new URLSearchParams(u.search);
+  for (const [key, value] of params) {
+    if (OPEN_REDIRECT_PARAMS.has(key.toLowerCase())) {
+      const decoded = decodeURIComponent(value);
+      if (/^https?:\/\//i.test(decoded)) {
+        return { hit: true, param: key, target: decoded };
+      }
+    }
+  }
+  return null;
+}
+
+function detectIDNHomograph(hostname: string): boolean {
+  const scripts: string[] = [];
+  for (const ch of hostname) {
+    const code = ch.codePointAt(0)!;
+    if (code >= 0x0400 && code <= 0x04FF) { scripts.push('cyrillic'); continue; }
+    if ((code >= 0x0370 && code <= 0x03FF) || (code >= 0x1F00 && code <= 0x1FFF)) { scripts.push('greek'); continue; }
+    if (code >= 0x3040 && code <= 0x309F) { scripts.push('hiragana'); continue; }
+    if (code >= 0x30A0 && code <= 0x30FF) { scripts.push('katakana'); continue; }
+    if (code >= 0x4E00 && code <= 0x9FFF) { scripts.push('han'); continue; }
+  }
+  const unique = new Set(scripts);
+  return unique.size >= 2;
+}
+
+function detectTyposquatting(hostname: string): string | null {
+  const domain = hostname.replace(/^www\./, '').split('.')[0];
+  for (const brand of BRAND_DOMAINS_FOR_TYPOSQUAT) {
+    const dist = levenshteinDistance(domain, brand);
+    if (dist === 1 || (dist === 2 && domain.length === brand.length)) {
+      return brand;
+    }
+  }
+  return null;
+}
+
 function preCheck(url: string): PreCheckResult {
   let u: URL;
   try {
@@ -95,18 +161,17 @@ function preCheck(url: string): PreCheckResult {
   const hostname = u.hostname.toLowerCase();
   const path     = u.pathname + u.search;
 
-  // ── Domain-level checks (unchanged) ──────────────────────────────────────
+  // ── Collect risk signals instead of early-returning ───────────────────────
+  const risks: string[] = [];
+  let unsafe = false;
 
-  if (!u.protocol.startsWith('https')) {
-    return { status: SafetyStatusValues.SUSPICIOUS,
-      reason: 'Connection is not encrypted (non-HTTPS). Sensitive data could be intercepted.' };
-  }
-
+  // IP address → UNSAFE (strong signal)
   if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)) {
     return { status: SafetyStatusValues.UNSAFE,
       reason: 'URL uses a raw IP address instead of a domain name — a common hiding technique for phishing sites.' };
   }
 
+  // @ symbol → UNSAFE (strong signal)
   const atIndex = url.indexOf('@');
   if (atIndex > 0 && !url.startsWith('mailto:')) {
     const beforeAt = url.slice(0, atIndex);
@@ -116,60 +181,79 @@ function preCheck(url: string): PreCheckResult {
     }
   }
 
+  // Non-HTTPS → mild risk (no longer immediate SUSPICIOUS)
+  if (!u.protocol.startsWith('https')) {
+    risks.push('Connection is not encrypted (non-HTTPS).');
+  }
+
+  // Many subdomains
   if (countDots(hostname) >= 4) {
-    return { status: SafetyStatusValues.SUSPICIOUS,
-      reason: `Unusually many subdomains (${countDots(hostname)} dots) — may be attempting to appear as a trusted site.` };
+    risks.push(`Unusually many subdomains (${countDots(hostname)} dots) — may be attempting to appear as a trusted site.`);
   }
 
   const parts = hostname.split('.');
   const registeredDomain = parts.length >= 2 ? parts.slice(-2).join('.') : hostname;
 
+  // Suspicious TLD
   if (SUSPICIOUS_TLDS.has(parts[parts.length - 1])) {
-    return { status: SafetyStatusValues.SUSPICIOUS,
-      reason: `Suspicious top-level domain ".${parts[parts.length - 1]}" — commonly used for malicious sites.` };
+    risks.push(`Suspicious top-level domain ".${parts[parts.length - 1]}" — commonly used for malicious sites.`);
   }
 
+  // URL shortener
   if (URL_SHORTENERS.has(registeredDomain)) {
-    return { status: SafetyStatusValues.SUSPICIOUS,
-      reason: 'Shortened URL hides the real destination. Proceed with caution.' };
+    risks.push('Shortened URL hides the real destination. Proceed with caution.');
   }
 
+  // Phishing keywords in path
   const keywordMatches = SUSPICIOUS_KEYWORDS.filter(kw =>
     path.toLowerCase().includes(kw) || hostname.includes(kw)
   );
   if (keywordMatches.length >= 2) {
-    return { status: SafetyStatusValues.SUSPICIOUS,
-      reason: `Contains phishing-related keywords: ${keywordMatches.join(', ')}.` };
+    risks.push(`Contains phishing-related keywords: ${keywordMatches.join(', ')}.`);
   }
 
+  // Long URL
   if (path.length > 400) {
-    return { status: SafetyStatusValues.SUSPICIOUS,
-      reason: 'Unusually long URL — may be hiding malicious parameters.' };
+    risks.push('Unusually long URL — may be hiding malicious parameters.');
   }
 
-  if (/[а-яА-Я]/.test(hostname)) {
-    return { status: SafetyStatusValues.UNSAFE,
-      reason: 'Domain contains Cyrillic characters that may visually impersonate a trusted domain (homograph attack).' };
-  }
-
+  // Encoded characters in hostname
   if (/%[0-9a-fA-F]{2}/.test(hostname)) {
-    return { status: SafetyStatusValues.SUSPICIOUS,
-      reason: 'Domain name contains encoded characters used to disguise the real website address.' };
+    risks.push('Domain name contains encoded characters used to disguise the real website address.');
   }
 
+  // ── New: IDN homograph (mixed scripts) ────────────────────────────────────
+  if (detectIDNHomograph(hostname)) {
+    unsafe = true;
+    risks.push('Domain mixes multiple character scripts (homograph attack) to visually impersonate trusted domains.');
+  }
+
+  // Punycode-encoded domain (xn-- prefix) — may hide homograph characters
+  if (hostname.startsWith('xn--')) {
+    risks.push('Domain uses Punycode encoding (xn-- prefix) to hide non-ASCII characters — possible homograph attack.');
+  }
+
+  // ── New: Typosquatting ────────────────────────────────────────────────────
+  const typosquat = detectTyposquatting(hostname);
+  if (typosquat) {
+    risks.push(`Domain name "${hostname}" is a close misspelling of "${typosquat}" — possible typosquatting attack.`);
+  }
+
+  // ── New: Open redirect ───────────────────────────────────────────────────
+  const redirect = detectOpenRedirect(u);
+  if (redirect) {
+    risks.push(`Open redirect via parameter "${redirect.param}" pointing to external URL "${redirect.target}".`);
+  }
+
+  // ── Brand spoof check ─────────────────────────────────────────────────────
   const brandDomains = ['paypal.com','facebook.com','instagram.com','twitter.com','x.com',
     'linkedin.com','whatsapp.com','amazon.com','apple.com','microsoft.com',
-    'google.com','gmail.com','netflix.com','bank','secure'];
-  // Brand spoof: catch subdomain-of-brand AND embedded-brand-domain patterns.
-  // e.g., docs.google.com is fine, but google.com.evil.com is spoofing.
+    'google.com','gmail.com','netflix.com'];
   const hasSpoof = brandDomains.some(d => {
-    if (d === 'bank')   return hostname.includes('bank') && !hostname.endsWith('.bank');
-    if (d === 'secure') return false;
     if (hostname === d) return false;
     const isSubdomain = hostname.endsWith('.' + d);
-    const isEmbedded = !isSubdomain && (hostname.startsWith(d + '.') || hostname.includes('.' + d + '.'));
+    const isEmbedded = hostname.startsWith(d + '.') || hostname.includes('.' + d + '.');
     if (!isSubdomain && !isEmbedded) return false;
-    const parts = hostname.split('.');
     const rd = parts.length >= 2 ? parts.slice(-2).join('.') : hostname;
     return !TRUSTED_DOMAINS.has(hostname) && !TRUSTED_DOMAINS.has(rd);
   });
@@ -178,37 +262,29 @@ function preCheck(url: string): PreCheckResult {
       reason: 'Domain appears to be impersonating a well-known brand using a subdomain trick.' };
   }
 
-  // ── Path-level heuristics (NEW) ──────────────────────────────────────────
-  // Run path analysis on every URL, even whitelisted domains.
+  // If any UNSAFE-level signal was found, return immediately
+  if (unsafe) {
+    return { status: SafetyStatusValues.UNSAFE, reason: risks[0] };
+  }
+
+  // ── Path-level heuristics ─────────────────────────────────────────────────
   const heuristic = pathHeuristics(u);
 
-  // Strong path signals override domain safety
   if (heuristic.isMalicious) {
-    return {
-      status: SafetyStatusValues.UNSAFE,
-      reason: heuristic.reasons[0] || 'URL path contains strong phishing indicators.',
-    };
+    return { status: SafetyStatusValues.UNSAFE, reason: heuristic.reasons[0] };
   }
 
-  // Even whitelisted domains get downgraded if path is suspicious
-  if (heuristic.isSuspicious && TRUSTED_DOMAINS.has(hostname)) {
-    return {
-      status: SafetyStatusValues.SUSPICIOUS,
-      reason: `The domain "${hostname}" is recognised, but the path looks suspicious: ${heuristic.reasons[0]}`,
-    };
+  // If there are accumulated risks OR path is suspicious → SUSPICIOUS
+  if (risks.length > 0 || heuristic.isSuspicious) {
+    const reason = heuristic.isSuspicious
+      ? heuristic.reasons[0]
+      : risks[0];
+    return { status: SafetyStatusValues.SUSPICIOUS, reason };
   }
 
-  // Whitelisted domain with clean path is SAFE
+  // Whitelisted domain with clean path → SAFE
   if (TRUSTED_DOMAINS.has(hostname)) {
     return { status: SafetyStatusValues.SAFE, reason: '' };
-  }
-
-  // Suspicious path on non-whitelisted domain
-  if (heuristic.isSuspicious) {
-    return {
-      status: SafetyStatusValues.SUSPICIOUS,
-      reason: heuristic.reasons[0] || 'URL path appears suspicious.',
-    };
   }
 
   return { status: null, reason: '' };

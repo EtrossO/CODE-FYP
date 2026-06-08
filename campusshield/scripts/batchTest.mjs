@@ -25,49 +25,149 @@ const TEST_CASES = [
   ['https://example.com/reset-password/verify-account',                'SUSPICIOUS', 'Phishing keywords in path'],
   ['https://example.com/aHR0cHM6Ly9leGFtcGxlLmNvbS9sb2dpbg==',        'SUSPICIOUS', 'Base64-like path segment'],
   ['https://forms.gle/abc123xyz',                                      'SAFE',        'Google Forms shortener — trusted'],
-  ['https://lms.uptm.edu.my/login',                                    'SAFE',        'UPTM LMS — trusted subdomain with /login (might be SUSPICIOUS)'],
+  ['https://lms.uptm.edu.my/login',                                    'SAFE',        'UPTM LMS — trusted subdomain with /login (clean path check)'],
   ['https://google.com',                                                'SAFE',        'Google root — trusted domain'],
   ['https://www.google.com.malicious-site.com/login',                  'UNSAFE',     'Brand spoof — google.com subdomain on malicious domain'],
-  ['https://xn--mgba3a4f16a.com/',                                     'SUSPICIOUS',  'IDN homograph attack domain'],
+  ['https://xn--mgba3a4f16a.com/',                                     'SUSPICIOUS',  'Punycode homograph — xn-- prefix detected'],
+  // New test cases for improved detection
+  ['https://example.com/login?url=https://evil.com/phish',             'SUSPICIOUS',  'Open redirect parameter to external URL'],
+  ['http://example.com/reset-password',                                'SUSPICIOUS',  'Non-HTTPS + phishing keyword "reset"'],
+  ['https://gooogle.com/login',                                        'SUSPICIOUS',  'Typosquatting — gooogle vs google (1 char diff)'],
+  ['https://example.com/redirect?next=http://phish.com',               'SUSPICIOUS',  'Open redirect with "next" param'],
+  ['https://secure.example.com/login?return=https://evil.com',         'SUSPICIOUS',  'Open redirect via "return" param'],
 ];
 
 import { normalizeUrl, extractFeatures, pathHeuristics } from '../src/services/features.ts';
 
-// ── Simulated preCheck (mirrors geminiService.ts logic) ──────────────────────────
+// ── Helper functions (mirroring geminiService.ts) ────────────────────────────────
+
+const OPEN_REDIRECT_PARAMS = new Set([
+  'url','redirect','redirect_uri','redirect_url','next','return',
+  'return_to','return_url','dest','destination','target','to',
+  'login_url','continue','out','view','link','ref','href',
+]);
+
+const BRAND_DOMAINS_FOR_TYPOSQUAT = [
+  'google','youtube','facebook','instagram','linkedin','whatsapp',
+  'amazon','apple','microsoft','netflix','paypal','twitter','x',
+  'github','stackoverflow','wikipedia','spotify','telegram','discord','zoom',
+  'canva','figma','reddit',
+];
+
+function levenshteinDistance(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+function detectOpenRedirect(u) {
+  const params = new URLSearchParams(u.search);
+  for (const [key, value] of params) {
+    if (OPEN_REDIRECT_PARAMS.has(key.toLowerCase())) {
+      const decoded = decodeURIComponent(value);
+      if (/^https?:\/\//i.test(decoded)) {
+        return { hit: true, param: key, target: decoded };
+      }
+    }
+  }
+  return null;
+}
+
+function detectTyposquatting(hostname) {
+  const domain = hostname.replace(/^www\./, '').split('.')[0];
+  for (const brand of BRAND_DOMAINS_FOR_TYPOSQUAT) {
+    const dist = levenshteinDistance(domain, brand);
+    if (dist === 1 || (dist === 2 && domain.length === brand.length)) {
+      return brand;
+    }
+  }
+  return null;
+}
+
 const PHISHING_KEYWORDS = ['login','signin','verify','secure','update','confirm',
   'account','password','credential','banking','paypal','refund','reward','prize',
   'winner','free','urgent','suspended','restrict','unlock','authenticate',
   'token','reset','recovery','authorize','auth','session','2fa','mfa',
   'verification','identity','validate','billing','invoice','payment'];
 
+// ── Simulated preCheck (mirrors updated geminiService.ts logic) ──────────────────
+
 function simulatePreCheck(url, features, heuristic) {
-  // Whitelisted domain + clean path → SAFE
-  if (features.isTrusted && !heuristic.isSuspicious) return { status: 1 };
+  let u;
+  try { u = new URL(normalizeUrl(url)); } catch { return { status: 0 }; }
+  const hostname = u.hostname.toLowerCase();
+  const path = u.pathname + u.search;
 
-  // Brand spoof → UNSAFE
+  // Strong signals → immediate return
   if (features.brandSpoof) return { status: -1 };
-
-  // Raw IP → UNSAFE
   if (features.isIp) return { status: -1 };
 
-  // Suspicious TLD → SUSPICIOUS
-  if (features.suspiciousTld) return { status: 0 };
+  // Collect risk signals
+  const risks = [];
 
-  // URL shortener → SUSPICIOUS
-  if (features.isShortener) return { status: 0 };
+  if (!u.protocol.startsWith('https')) {
+    risks.push('non-https');
+  }
 
-  // 2+ phishing keywords in path → SUSPICIOUS
-  const hostname = new URL(normalizeUrl(url)).hostname.toLowerCase();
-  const path = new URL(normalizeUrl(url)).pathname + new URL(normalizeUrl(url)).search;
+  if (features.suspiciousTld) {
+    risks.push('suspicious-tld');
+  }
+
+  if (features.isShortener) {
+    risks.push('url-shortener');
+  }
+
   const kwHits = PHISHING_KEYWORDS.filter(kw =>
     path.toLowerCase().includes(kw) || hostname.includes(kw)
   );
-  if (kwHits.length >= 2) return { status: 0, reason: `Keywords: ${kwHits.join(', ')}` };
+  if (kwHits.length >= 2) {
+    risks.push('keywords: ' + kwHits.join(', '));
+  }
 
-  // Punycode/IDN domain → SUSPICIOUS
-  if (hostname.startsWith('xn--')) return { status: 0 };
+  if (path.length > 400) {
+    risks.push('long-url');
+  }
 
-  return null; // no decision — falls through to heuristic
+  // IDN/Punycode
+  if (hostname.startsWith('xn--')) {
+    risks.push('punycode-domain');
+  }
+
+  // Open redirect
+  const redirect = detectOpenRedirect(u);
+  if (redirect) {
+    risks.push('open-redirect: ' + redirect.param + ' → ' + redirect.target);
+  }
+
+  // Typosquatting
+  const typosquat = detectTyposquatting(hostname);
+  if (typosquat) {
+    risks.push('typosquatting: ' + typosquat);
+  }
+
+  // Path heuristics
+  if (heuristic.isMalicious) return { status: -1 };
+
+  // If any risks or path is suspicious → SUSPICIOUS
+  if (risks.length > 0 || heuristic.isSuspicious) {
+    return { status: 0, reason: risks[0] || heuristic.reasons[0] };
+  }
+
+  // Trusted domain with clean path → SAFE
+  if (features.isTrusted) {
+    return { status: 1 };
+  }
+
+  return null; // no decision — falls through
 }
 
 console.log('\n=== BATCH HEURISTIC TEST ===\n');

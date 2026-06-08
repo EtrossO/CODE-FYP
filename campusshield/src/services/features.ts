@@ -51,7 +51,7 @@ function isGibberish(segment: string): boolean {
 function looksLikeBase64(s: string): boolean {
   if (s.length < 16) return false;
   if (!/\d/.test(s)) return false; // base64 almost always has digits
-  return /^[A-Za-z0-9+/=_\-]{16,}$/.test(s);
+  return /^[A-Za-z0-9+/=_-]{16,}$/.test(s);
 }
 
 /** Check if string contains repeated runs of the same character (e.g., "aaaa", "1111"). */
