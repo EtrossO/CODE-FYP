@@ -274,7 +274,12 @@ function preCheck(url: string): PreCheckResult {
     return { status: SafetyStatusValues.UNSAFE, reason: heuristic.reasons[0] };
   }
 
-  // If there are accumulated risks OR path is suspicious → SUSPICIOUS
+  // 2+ risk signals → UNSAFE (combined signals strongly suggest malicious intent)
+  if (risks.length >= 2) {
+    return { status: SafetyStatusValues.UNSAFE, reason: risks[0] };
+  }
+
+  // Single risk signal or path is suspicious → SUSPICIOUS
   if (risks.length > 0 || heuristic.isSuspicious) {
     const reason = heuristic.isSuspicious
       ? heuristic.reasons[0]
