@@ -1,0 +1,287 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1e40af"/>
+      <stop offset="100%" style="stop-color:#3b82f6"/>
+    </linearGradient>
+    <linearGradient id="browserBox" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f8fafc"/>
+      <stop offset="100%" style="stop-color:#e2e8f0"/>
+    </linearGradient>
+    <linearGradient id="safeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#22c55e"/>
+      <stop offset="100%" style="stop-color:#16a34a"/>
+    </linearGradient>
+    <linearGradient id="suspGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#eab308"/>
+      <stop offset="100%" style="stop-color:#ca8a04"/>
+    </linearGradient>
+    <linearGradient id="unsafeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ef4444"/>
+      <stop offset="100%" style="stop-color:#dc2626"/>
+    </linearGradient>
+    <linearGradient id="mlGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#a855f7"/>
+      <stop offset="100%" style="stop-color:#7c3aed"/>
+    </linearGradient>
+    <linearGradient id="dbGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#06b6d4"/>
+      <stop offset="100%" style="stop-color:#0891b2"/>
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="115%" height="115%">
+      <feDropShadow dx="2" dy="3" stdDeviation="4" flood-opacity="0.15"/>
+    </filter>
+    <filter id="shadowSm" x="-5%" y="-5%" width="115%" height="115%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6"/>
+    </marker>
+    <marker id="arrowGray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+    <marker id="arrowRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444"/>
+    </marker>
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#22c55e"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="900" fill="#f1f5f9" rx="12"/>
+
+  <!-- Title Bar -->
+  <rect x="0" y="0" width="1200" height="60" fill="url(#headerGrad)" rx="12"/>
+  <rect x="0" y="40" width="1200" height="20" fill="url(#headerGrad)"/>
+  <text x="600" y="40" text-anchor="middle" fill="#fff" font-size="22" font-weight="bold">Campus Shield — System Architecture &amp; Data Flow</text>
+
+  <!-- ========== BROWSER BOUNDARY ========== -->
+  <rect x="25" y="75" width="1150" height="810" rx="16" fill="url(#browserBox)" stroke="#cbd5e1" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="25" y="75" width="1150" height="30" rx="16" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="1"/>
+  <rect x="25" y="95" width="1150" height="10" fill="#e2e8f0"/>
+  <circle cx="50" cy="90" r="6" fill="#ef4444"/>
+  <circle cx="68" cy="90" r="6" fill="#eab308"/>
+  <circle cx="86" cy="90" r="6" fill="#22c55e"/>
+  <text x="560" y="94" text-anchor="middle" fill="#64748b" font-size="11" font-weight="bold">BROWSER — Single Page Application (React + TypeScript + Vite)</text>
+
+  <!-- ========== PRESENTATION LAYER ========== -->
+  <rect x="50" y="118" width="1100" height="120" rx="10" fill="#fff" stroke="#93c5fd" stroke-width="1.5" filter="url(#shadowSm)"/>
+  <rect x="50" y="118" width="1100" height="26" rx="10" fill="#dbeafe"/>
+  <rect x="50" y="134" width="1100" height="10" fill="#dbeafe"/>
+  <text x="600" y="136" text-anchor="middle" fill="#1d4ed8" font-size="12" font-weight="bold"> PRESENTATION LAYER — React Components</text>
+
+  <!-- ScannerTab -->
+  <rect x="70" y="152" width="240" height="76" rx="8" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5"/>
+  <text x="190" y="175" text-anchor="middle" fill="#1e40af" font-size="12" font-weight="bold">ScannerTab</text>
+  <text x="190" y="192" text-anchor="middle" fill="#475569" font-size="9.5">URL Input field</text>
+  <text x="190" y="206" text-anchor="middle" fill="#475569" font-size="9.5">QR Code scanner (jsQR)</text>
+  <text x="190" y="220" text-anchor="middle" fill="#475569" font-size="9.5">Camera / image upload</text>
+
+  <!-- HistoryTab -->
+  <rect x="330" y="152" width="240" height="76" rx="8" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5"/>
+  <text x="450" y="175" text-anchor="middle" fill="#1e40af" font-size="12" font-weight="bold">HistoryTab</text>
+  <text x="450" y="192" text-anchor="middle" fill="#475569" font-size="9.5">Filter by status</text>
+  <text x="450" y="206" text-anchor="middle" fill="#475569" font-size="9.5">Search by URL/title/reason</text>
+  <text x="450" y="220" text-anchor="middle" fill="#475569" font-size="9.5">Sort by timestamp</text>
+
+  <!-- ThreatHeatmap -->
+  <rect x="590" y="152" width="240" height="76" rx="8" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5"/>
+  <text x="710" y="175" text-anchor="middle" fill="#1e40af" font-size="12" font-weight="bold">ThreatHeatmap</text>
+  <text x="710" y="192" text-anchor="middle" fill="#475569" font-size="9.5">Domain threat stats</text>
+  <text x="710" y="206" text-anchor="middle" fill="#475569" font-size="9.5">Stacked bar charts</text>
+  <text x="710" y="220" text-anchor="middle" fill="#475569" font-size="9.5">Summary cards</text>
+
+  <!-- ResultModal -->
+  <rect x="850" y="152" width="180" height="76" rx="8" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5"/>
+  <text x="940" y="175" text-anchor="middle" fill="#1e40af" font-size="12" font-weight="bold">ResultModal</text>
+  <text x="940" y="195" text-anchor="middle" fill="#475569" font-size="9.5">Detailed scan</text>
+  <text x="940" y="209" text-anchor="middle" fill="#475569" font-size="9.5">result popup</text>
+
+  <!-- Sidebar -->
+  <rect x="1048" y="152" width="90" height="76" rx="8" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5"/>
+  <text x="1093" y="175" text-anchor="middle" fill="#1e40af" font-size="11" font-weight="bold">Sidebar</text>
+  <text x="1093" y="195" text-anchor="middle" fill="#475569" font-size="9">UPTM</text>
+  <text x="1093" y="209" text-anchor="middle" fill="#475569" font-size="9">Links</text>
+
+  <!-- Arrow from ScannerTab to App -->
+  <line x1="310" y1="190" x2="340" y2="190" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrowBlue)"/>
+  <text x="325" y="183" text-anchor="middle" fill="#3b82f6" font-size="8">URL</text>
+
+  <!-- ========== APP.TSX (STATE OWNER) ========== -->
+  <rect x="50" y="255" width="1100" height="50" rx="10" fill="#fff" stroke="#f59e0b" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="50" y="255" width="1100" height="26" rx="10" fill="#fef3c7"/>
+  <rect x="50" y="271" width="1100" height="10" fill="#fef3c7"/>
+  <text x="600" y="273" text-anchor="middle" fill="#92400e" font-size="12" font-weight="bold"> App.tsx — State Owner &amp; Orchestrator</text>
+
+  <text x="140" y="308" text-anchor="middle" fill="#475569" font-size="9.5">handleCheck(url)</text>
+  <text x="400" y="308" text-anchor="middle" fill="#475569" font-size="9.5">Calls analyzeLinkSafety(url)</text>
+  <text x="660" y="308" text-anchor="middle" fill="#475569" font-size="9.5">Saves result to IndexedDB (db.scanHistory.add)</text>
+  <text x="920" y="308" text-anchor="middle" fill="#475569" font-size="9.5">Updates React state (history[])</text>
+
+  <!-- Arrow from App to Pipeline -->
+  <line x1="600" y1="305" x2="600" y2="330" stroke="#3b82f6" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+  <text x="612" y="320" fill="#3b82f6" font-size="9" font-weight="bold">analyzeLinkSafety(url)</text>
+
+  <!-- ========== PIPELINE ========== -->
+  <rect x="50" y="335" width="1100" height="230" rx="10" fill="#fff" stroke="#a855f7" stroke-width="1.5" filter="url(#shadowSm)"/>
+  <rect x="50" y="335" width="1100" height="26" rx="10" fill="#f3e8ff"/>
+  <rect x="50" y="351" width="1100" height="10" fill="#f3e8ff"/>
+  <text x="600" y="353" text-anchor="middle" fill="#6b21a8" font-size="12" font-weight="bold"> 4-STAGE ANALYSIS PIPELINE (geminiService.ts)</text>
+
+  <!-- Stage 1 -->
+  <rect x="70" y="370" width="240" height="90" rx="8" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.5"/>
+  <text x="190" y="390" text-anchor="middle" fill="#991b1b" font-size="11" font-weight="bold">Stage 1: Heuristics</text>
+  <text x="190" y="407" text-anchor="middle" fill="#475569" font-size="8.5">• IP address detection</text>
+  <text x="190" y="419" text-anchor="middle" fill="#475569" font-size="8.5">• Brand spoof detection</text>
+  <text x="190" y="431" text-anchor="middle" fill="#475569" font-size="8.5">• Typosquatting check</text>
+  <text x="190" y="443" text-anchor="middle" fill="#475569" font-size="8.5">• IDN homograph attack</text>
+  <text x="190" y="455" text-anchor="middle" fill="#475569" font-size="8.5">• Open redirect detection</text>
+
+  <!-- Arrow Stage 1 → 2 -->
+  <line x1="310" y1="415" x2="340" y2="415" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowGray)"/>
+  <text x="325" y="408" text-anchor="middle" fill="#64748b" font-size="7.5">SAFE/UNSAFE</text>
+  <text x="325" y="420" text-anchor="middle" fill="#64748b" font-size="7.5">or null</text>
+
+  <!-- Stage 2 -->
+  <rect x="345" y="370" width="240" height="90" rx="8" fill="#f3e8ff" stroke="#c084fc" stroke-width="1.5"/>
+  <text x="465" y="390" text-anchor="middle" fill="#7c3aed" font-size="11" font-weight="bold">Stage 2: ML Classifier</text>
+  <text x="465" y="407" text-anchor="middle" fill="#475569" font-size="8.5">• TF.js Neural Network</text>
+  <text x="465" y="419" text-anchor="middle" fill="#475569" font-size="8.5">• 29 URL features → tensor</text>
+  <text x="465" y="431" text-anchor="middle" fill="#475569" font-size="8.5">• 4 layers: 128→64→32→3</text>
+  <text x="465" y="443" text-anchor="middle" fill="#475569" font-size="8.5">• Output: SAFE/SUS/UNSAFE</text>
+  <text x="465" y="455" text-anchor="middle" fill="#475569" font-size="8.5">+ confidence threshold</text>
+
+  <!-- Arrow Stage 2 → 3 -->
+  <line x1="585" y1="415" x2="615" y2="415" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowGray)"/>
+  <text x="600" y="408" text-anchor="middle" fill="#64748b" font-size="7.5">if low</text>
+  <text x="600" y="420" text-anchor="middle" fill="#64748b" font-size="7.5">confidence</text>
+
+  <!-- Stage 3 -->
+  <rect x="620" y="370" width="240" height="90" rx="8" fill="#fff7ed" stroke="#fdba74" stroke-width="1.5"/>
+  <text x="740" y="390" text-anchor="middle" fill="#c2410c" font-size="11" font-weight="bold">Stage 3: Safe Browsing</text>
+  <text x="740" y="407" text-anchor="middle" fill="#475569" font-size="8.5">• Google Safe Browsing API</text>
+  <text x="740" y="419" text-anchor="middle" fill="#475569" font-size="8.5">• POST /v4/threatMatches</text>
+  <text x="740" y="431" text-anchor="middle" fill="#475569" font-size="8.5">• MALWARE check</text>
+  <text x="740" y="443" text-anchor="middle" fill="#475569" font-size="8.5">• SOCIAL_ENGINEERING</text>
+  <text x="740" y="455" text-anchor="middle" fill="#475569" font-size="8.5">• UNWANTED_SOFTWARE</text>
+
+  <!-- Arrow Stage 3 → 4 -->
+  <line x1="860" y1="415" x2="890" y2="415" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowGray)"/>
+  <text x="875" y="408" text-anchor="middle" fill="#64748b" font-size="7.5">if no</text>
+  <text x="875" y="420" text-anchor="middle" fill="#64748b" font-size="7.5">match</text>
+
+  <!-- Stage 4 -->
+  <rect x="895" y="370" width="235" height="90" rx="8" fill="#ecfdf5" stroke="#6ee7b7" stroke-width="1.5"/>
+  <text x="1012" y="390" text-anchor="middle" fill="#15803d" font-size="11" font-weight="bold">Stage 4: Gemini AI</text>
+  <text x="1012" y="407" text-anchor="middle" fill="#475569" font-size="8.5">• Google Gemini 2.0 Flash</text>
+  <text x="1012" y="419" text-anchor="middle" fill="#475569" font-size="8.5">• LLM analyzes URL context</text>
+  <text x="1012" y="431" text-anchor="middle" fill="#475569" font-size="8.5">• Structured JSON output:</text>
+  <text x="1012" y="443" text-anchor="middle" fill="#475569" font-size="8.5">{ status, reason, title,</text>
+  <text x="1012" y="455" text-anchor="middle" fill="#475569" font-size="8.5">  description }</text>
+
+  <!-- Short-circuit labels -->
+  <!-- Stage 1 unsafe shortcut -->
+  <text x="80" y="480" fill="#ef4444" font-size="8" font-style="italic">← If UNSAFE at Stage 1 → return immediately</text>
+  <!-- Stage 2 high conf shortcut -->
+  <text x="80" y="494" fill="#a855f7" font-size="8" font-style="italic">← If ML high-confidence → return, skip Stages 3-4</text>
+
+  <!-- Cache note -->
+  <rect x="70" y="508" width="1060" height="24" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="600" y="524" text-anchor="middle" fill="#64748b" font-size="9">In-memory resultCache Map&lt;string, result&gt; — avoids re-analyzing the same URL</text>
+
+  <!-- Arrow from Pipeline to result -->
+  <line x1="600" y1="565" x2="600" y2="590" stroke="#3b82f6" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+  <text x="612" y="580" fill="#3b82f6" font-size="9" font-weight="bold">ScanResult</text>
+
+  <!-- ========== DECISION: Which path to take? ========== -->
+  <polygon points="600,590 620,610 600,630 580,610" fill="#f59e0b" stroke="#d97706" stroke-width="1.5"/>
+  <text x="600" y="614" text-anchor="middle" fill="#fff" font-size="8" font-weight="bold">SAVE?</text>
+
+  <!-- SAVE path -->
+  <line x1="620" y1="610" x2="800" y2="610" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrowBlue)"/>
+  <text x="710" y="603" text-anchor="middle" fill="#3b82f6" font-size="9" font-weight="bold">YES → Save to database</text>
+
+  <!-- UPDATE STATE path -->
+  <line x1="580" y1="610" x2="400" y2="610" stroke="#22c55e" stroke-width="2" marker-end="url(#arrowGreen)"/>
+  <text x="490" y="603" text-anchor="middle" fill="#22c55e" font-size="9" font-weight="bold">YES → Update React state</text>
+
+  <!-- ========== DATABASE ========== -->
+  <rect x="750" y="640" width="350" height="110" rx="10" fill="#fff" stroke="#06b6d4" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="750" y="640" width="350" height="26" rx="10" fill="#cffafe"/>
+  <rect x="750" y="656" width="350" height="10" fill="#cffafe"/>
+  <text x="925" y="658" text-anchor="middle" fill="#155e75" font-size="12" font-weight="bold"> DATA PERSISTENCE LAYER</text>
+
+  <!-- DB Box -->
+  <rect x="770" y="672" width="310" height="65" rx="6" fill="#ecfeff" stroke="#22d3ee" stroke-width="1"/>
+  <text x="925" y="690" text-anchor="middle" fill="#0e7490" font-size="11" font-weight="bold">IndexedDB (Dexie.js)</text>
+  <text x="925" y="706" text-anchor="middle" fill="#475569" font-size="9">Table: scanHistory</text>
+  <text x="925" y="720" text-anchor="middle" fill="#475569" font-size="9">Indexes: id (PK), status, timestamp</text>
+  <text x="925" y="734" text-anchor="middle" fill="#475569" font-size="9">Records: ScanResult{ id, url, status, timestamp, reason, title, description }</text>
+
+  <!-- Arrow from DB to UI -->
+  <line x1="770" y1="700" x2="600" y2="700" stroke="#22c55e" stroke-width="2" marker-end="url(#arrowGreen)"/>
+  <text x="685" y="693" text-anchor="middle" fill="#22c55e" font-size="8">LOAD on mount</text>
+  <text x="685" y="705" text-anchor="middle" fill="#22c55e" font-size="8">db.scanHistory.orderBy</text>
+
+  <!-- Arrow from DB to Heatmap -->
+  <line x1="770" y1="720" x2="600" y2="720" stroke="#22c55e" stroke-width="2" marker-end="url(#arrowGreen)" stroke-dasharray="5,3"/>
+  <text x="685" y="728" text-anchor="middle" fill="#22c55e" font-size="8">statsService reads all ➝ group by domain</text>
+
+  <!-- ========== EXTERNAL APIS ========== -->
+  <rect x="50" y="640" width="500" height="110" rx="10" fill="#fff" stroke="#f59e0b" stroke-width="1.5" filter="url(#shadowSm)"/>
+  <rect x="50" y="640" width="500" height="26" rx="10" fill="#fef3c7"/>
+  <rect x="50" y="656" width="500" height="10" fill="#fef3c7"/>
+  <text x="300" y="658" text-anchor="middle" fill="#92400e" font-size="12" font-weight="bold"> EXTERNAL API CALLS</text>
+
+  <!-- Safe Browsing -->
+  <rect x="70" y="674" width="220" height="64" rx="6" fill="#fff7ed" stroke="#fdba74" stroke-width="1"/>
+  <text x="180" y="693" text-anchor="middle" fill="#c2410c" font-size="11" font-weight="bold">Google Safe Browsing</text>
+  <text x="180" y="710" text-anchor="middle" fill="#475569" font-size="9">REST API v4 (threatMatches:find)</text>
+  <text x="180" y="725" text-anchor="middle" fill="#475569" font-size="9">Checks known threat databases</text>
+
+  <!-- Gemini -->
+  <rect x="310" y="674" width="220" height="64" rx="6" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="420" y="693" text-anchor="middle" fill="#15803d" font-size="11" font-weight="bold">Google Gemini AI</text>
+  <text x="420" y="710" text-anchor="middle" fill="#475569" font-size="9">Gemini 2.0 Flash model</text>
+  <text x="420" y="725" text-anchor="middle" fill="#475569" font-size="9">LLM-based URL context analysis</text>
+
+  <!-- TF.js Model -->
+  <rect x="70" y="748" width="460" height="32" rx="6" fill="#f3e8ff" stroke="#c084fc" stroke-width="1"/>
+  <text x="300" y="768" text-anchor="middle" fill="#7c3aed" font-size="10" font-weight="bold">Pre-trained TF.js Model (/tfjs_model/model.json + group1-shard1.bin)</text>
+
+  <!-- Static asset -->
+  <rect x="750" y="760" width="350" height="32" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="925" y="780" text-anchor="middle" fill="#64748b" font-size="9">Deployed on Cloudflare Pages — static SPA + redirects</text>
+
+  <!-- ========== LEGEND ========== -->
+  <rect x="50" y="800" width="1100" height="70" rx="8" fill="#fff" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="80" y="820" fill="#1e293b" font-size="11" font-weight="bold">Legend:</text>
+
+  <rect x="160" y="808" width="14" height="14" rx="3" fill="#3b82f6"/>
+  <text x="178" y="820" fill="#475569" font-size="9.5">Data flow / Function call</text>
+
+  <rect x="370" y="808" width="14" height="14" rx="3" fill="#22c55e"/>
+  <text x="388" y="820" fill="#475569" font-size="9.5">Database read</text>
+
+  <rect x="530" y="808" width="14" height="14" rx="3" fill="#f59e0b"/>
+  <text x="548" y="820" fill="#475569" font-size="9.5">Decision / Orchestrator</text>
+
+  <rect x="730" y="808" width="14" height="14" rx="3" fill="#a855f7"/>
+  <text x="748" y="820" fill="#475569" font-size="9.5">ML / AI Service</text>
+
+  <rect x="160" y="832" width="14" height="14" rx="3" fill="#fca5a5"/>
+  <text x="178" y="844" fill="#475569" font-size="9.5">Stage 1: Heuristics</text>
+
+  <rect x="370" y="832" width="14" height="14" rx="3" fill="#c084fc"/>
+  <text x="388" y="844" fill="#475569" font-size="9.5">Stage 2: ML</text>
+
+  <rect x="530" y="832" width="14" height="14" rx="3" fill="#fdba74"/>
+  <text x="548" y="844" fill="#475569" font-size="9.5">Stage 3: Safe Browsing</text>
+
+  <rect x="730" y="832" width="14" height="14" rx="3" fill="#6ee7b7"/>
+  <text x="748" y="844" fill="#475569" font-size="9.5">Stage 4: Gemini AI</text>
+
+  <rect x="930" y="832" width="14" height="14" rx="3" fill="#06b6d4"/>
+  <text x="948" y="844" fill="#475569" font-size="9.5">Database (IndexedDB)</text>
+</svg>
