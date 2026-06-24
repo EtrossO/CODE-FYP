@@ -1,124 +1,175 @@
 # Campus Shield
 
-An AI-powered URL / QR-code phishing scanner (React + TypeScript + Vite).
+**An AI-Powered URL & QR Code Phishing Scanner**
 
-## Deploying to Cloudflare Pages
+> **Final Year Project** — Mohamad Syaher Izham Bin Isshamwil (AM2412017976)
+> Information Technology (Cyber Security), Universiti Poly-Tech Malaysia (UPTM)
 
-This project is a static single-page app and is configured to deploy on
-**Cloudflare Pages**. The following files make it work:
+---
 
-- `public/_redirects` – SPA catch-all so deep links / refreshes return `index.html`.
-- `public/_headers` – basic security + cache headers.
-- `.node-version` – pins the Cloudflare build image to Node 22.
-- `wrangler.toml` – Wrangler/Pages project settings (`pages_build_output_dir = "dist"`).
+## Overview
 
-### Option A — Connect your Git repo (recommended)
+Campus Shield is a fully client-side single-page application that analyses URLs and QR codes for phishing, malware, and other security threats using a **4-layer defence pipeline**. Users can scan URLs manually, scan QR codes via their device camera, or upload QR code images — all within the browser with no server-side backend.
 
-1. Go to the [Cloudflare dashboard](https://dash.cloudflare.com/) → **Workers & Pages → Create → Pages → Connect to Git**.
-2. Select the `EtrossO/CODE-FYP` repository.
-3. Set the build settings:
-   - **Framework preset:** `Vite`
-   - **Build command:** `npm run build`
-   - **Build output directory:** `dist`
-4. Under **Settings → Environment variables**, add your keys (these are still
-   bundled into the client because the app calls the APIs from the browser):
-   - `VITE_API_KEY` = your Google Gemini API key
-   - `VITE_SAFE_BROWSING_API_KEY` = your Google Safe Browsing API key
-5. Click **Save and Deploy**. Every push to `main` then auto-deploys.
+---
 
-> Note: Because this app calls Gemini / Safe Browsing directly from the browser,
-> the API keys are visible in the shipped bundle. To hide them you would need a
-> Cloudflare Worker / Pages Function proxy (not included in this deployment-only setup).
+## Features
 
-### Option B — Deploy manually with Wrangler CLI
+- **URL Scanning** — Enter any URL for a comprehensive 4-stage safety analysis
+- **QR Code Scanner** — Scan QR codes in real time using your device camera
+- **QR Code Upload** — Upload QR code images for decoding and analysis
+- **Scan History** — View and search past scan results (stored locally in IndexedDB)
+- **Threat Heatmap** — Visualise aggregated domain statistics across all scans
+- **4-Layer Detection Pipeline** — Rule-based heuristics, on-device ML, Google Safe Browsing, and Gemini AI
 
-```bash
-npm install            # installs deps incl. wrangler
-npm run pages:deploy   # builds then runs: wrangler pages deploy dist
+---
+
+## Architecture: 4-Layer Detection Pipeline
+
+| Stage | Layer | Technology | Description |
+|-------|-------|------------|-------------|
+| 1 | **Heuristics** | Rule-based ruleset | IP check, brand spoofing, typosquatting, IDN homograph attacks, URL shorteners, phishing keywords, open redirect detection |
+| 2 | **On-Device ML** | TensorFlow.js | Neural network classifier (128->64->32->3 layers) using 29 URL features — runs entirely in-browser |
+| 3 | **Safe Browsing** | Google Safe Browsing API v4 | Checks URL against Google's known threat database |
+| 4 | **Gemini AI** | Gemini 2.0 Flash (LLM) | Semantic URL analysis using Google's large language model |
+
+Each stage can short-circuit on strong signals for performance. Stages are cumulative — if a URL passes earlier stages, later stages provide deeper analysis.
+
+---
+
+## Tech Stack
+
+| Category | Technology |
+|----------|-----------|
+| Frontend | React 19, TypeScript 5.9, Tailwind CSS 3.4 |
+| Build | Vite 7.2 |
+| Client Database | Dexie.js 4.4 (IndexedDB) |
+| Machine Learning | TensorFlow.js 4.22 |
+| AI | Google Generative AI (Gemini 2.0 Flash) |
+| Security API | Google Safe Browsing v4 |
+| QR Decoding | jsQR 1.4 |
+| Deployment | Cloudflare Pages / Vercel |
+
+---
+
+## Project Structure
+
 ```
-
-The first run will prompt you to log in to Cloudflare and create the
-`campus-shield` Pages project.
-
-### Local preview of the production build
-
-```bash
-npm run build
-npm run pages:dev      # serves dist/ via wrangler with Pages behaviour
+campusshield/
+├── src/
+│   ├── main.tsx                  # React entry point
+│   ├── App.tsx                   # Root component with routing
+│   ├── types.ts                  # TypeScript type definitions
+│   ├── components/
+│   │   ├── ScannerTab.tsx        # URL input + QR camera/upload scanner
+│   │   ├── HistoryTab.tsx        # Scan history with search/filter
+│   │   ├── ResultModal.tsx       # Detailed scan result modal
+│   │   ├── Sidebar.tsx           # UPTM student portal sidebar
+│   │   └── ThreatHeatmap.tsx     # Domain statistics heatmap
+│   ├── services/
+│   │   ├── geminiService.ts      # Main analysis pipeline (4 stages)
+│   │   ├── mlService.ts          # TensorFlow.js model inference
+│   │   ├── safeBrowsingService.ts# Google Safe Browsing API client
+│   │   ├── features.ts           # 29-feature URL extraction + heuristics
+│   │   └── statsService.ts       # Domain statistics aggregation
+│   └── db/
+│       └── database.ts           # Dexie IndexedDB setup
+├── docs/                         # Architecture & testing documentation
+├── public/tfjs_model/            # Trained ML model files
+├── scripts/                      # ML training & testing scripts
+├── datasets/                     # Training datasets (CSV)
+└── architecture.svg              # System architecture diagram
 ```
 
 ---
 
-## React + TypeScript + Vite (template notes)
+## Getting Started
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+### Prerequisites
 
-Currently, two official plugins are available:
+- **Node.js 22.x** (see `.nvmrc`)
+- A **Google Gemini API key** (get one at https://aistudio.google.com/apikey)
+- A **Google Safe Browsing API key** (enable the Safe Browsing API in Google Cloud Console)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Local Development
 
-## React Compiler
+```bash
+# 1. Install dependencies
+npm install
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+# 2. Create environment file
+cp .env.example .env
 
-## Expanding the ESLint configuration
+# 3. Add your API keys to .env
+#    VITE_API_KEY=your_gemini_key
+#    VITE_SAFE_BROWSING_API_KEY=your_safe_browsing_key
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# 4. Start the dev server
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The app will be available at `http://localhost:5173`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Build for Production
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run build
+npm run preview   # preview the production build locally
 ```
+
+---
+
+## Deployment
+
+### Cloudflare Pages (Recommended)
+
+1. Push this repository to GitHub
+2. Go to **Cloudflare Dashboard -> Workers & Pages -> Create -> Pages -> Connect to Git**
+3. Select your repository
+4. Build settings:
+   - **Framework preset:** `Vite`
+   - **Build command:** `npm run build`
+   - **Build output directory:** `dist`
+5. Add environment variables:
+   - `VITE_API_KEY` — your Gemini API key
+   - `VITE_SAFE_BROWSING_API_KEY` — your Safe Browsing API key
+6. Deploy
+
+### Manual Deployment
+
+```bash
+npm run pages:deploy   # builds and deploys via Wrangler
+```
+
+---
+
+## API Key Security Note
+
+> Because this app calls the Gemini and Safe Browsing APIs directly from the browser (no backend proxy), the API keys are bundled into the client-side JavaScript and are technically visible to end users. This is an accepted architectural trade-off for a fully client-side SPA. For production use behind a login, consider adding a Cloudflare Worker proxy.
+
+---
+
+## Documentation
+
+- [`docs/conversation-architecture.md`](docs/conversation-architecture.md) — Architecture overview, data flow, tech stack, and design rationale
+- [`docs/conversation-2026-06-16.md`](docs/conversation-2026-06-16.md) — Testing methodology, security analysis, and database schema
+- [`CAMPUSHIELD_DFD.md`](CAMPUSHIELD_DFD.md) — Data Flow Diagrams (Level 0, 1, 2)
+- [`architecture.svg`](architecture.svg) — System architecture diagram (visual)
+
+---
+
+## ML Model Training
+
+The on-device ML model can be retrained using the provided scripts:
+
+```bash
+npm run train-model   # trains TF.js model using dataset.csv
+```
+
+See `scripts/trainModel.js` for details.
+
+---
+
+## License
+
+This project is developed for academic purposes as part of the Final Year Project at Universiti Poly-Tech Malaysia (UPTM).
