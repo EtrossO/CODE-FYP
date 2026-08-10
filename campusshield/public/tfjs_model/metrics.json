@@ -1,0 +1,117 @@
+{
+  "generatedAt": "2026-08-10T05:54:25.863Z",
+  "featureCount": 33,
+  "featureNames": [
+    "urlLength",
+    "domainLength",
+    "isHttps",
+    "atSymbol",
+    "isIp",
+    "suspiciousTld",
+    "isShortener",
+    "hasPort",
+    "subdomainDepth",
+    "dotCount",
+    "dashCount",
+    "numericRatio",
+    "encodedChars",
+    "cyrillicChars",
+    "brandSpoof",
+    "isTrusted",
+    "punycode",
+    "pathLength",
+    "pathSegmentCount",
+    "maxPathSegmentEntropy",
+    "meanPathSegmentEntropy",
+    "pathNumericRatio",
+    "pathSpecialCharRatio",
+    "pathSuspiciousKwCount",
+    "lastSegmentGibberish",
+    "tldInPath",
+    "queryParamCount",
+    "doubleSlashInPath",
+    "repeatedCharsInPath",
+    "domainPathRatio",
+    "queryEntropy",
+    "brandSubstring",
+    "suspiciousScheme"
+  ],
+  "classes": [
+    "SAFE",
+    "SUSPICIOUS",
+    "UNSAFE"
+  ],
+  "dataset": "C:\\Users\\SYAHER IZHAM\\Documents\\CODE FYP\\campusshield\\dataset_balanced_9k.csv",
+  "samples": 9000,
+  "trainSamples": 7200,
+  "testSamples": 1800,
+  "trainDistribution": [
+    2410,
+    2418,
+    2372
+  ],
+  "testDistribution": [
+    590,
+    582,
+    628
+  ],
+  "classWeights": {
+    "0": 0.995850622406639,
+    "1": 0.9925558312655087,
+    "2": 1.0118043844856661
+  },
+  "epochs": 60,
+  "batchSize": 64,
+  "finalTrainingAccuracy": 88.89,
+  "finalTrainingLoss": 0.2973,
+  "test": {
+    "accuracy": 0.8972222222222223,
+    "macroF1": 0.8979107312440647,
+    "perClass": [
+      {
+        "class": "SAFE",
+        "tp": 490,
+        "fp": 12,
+        "fn": 100,
+        "precision": 0.9760956175298805,
+        "recall": 0.8305084745762712,
+        "f1": 0.8974358974358975
+      },
+      {
+        "class": "SUSPICIOUS",
+        "tp": 545,
+        "fp": 61,
+        "fn": 37,
+        "precision": 0.8993399339933993,
+        "recall": 0.936426116838488,
+        "f1": 0.9175084175084176
+      },
+      {
+        "class": "UNSAFE",
+        "tp": 580,
+        "fp": 112,
+        "fn": 48,
+        "precision": 0.838150289017341,
+        "recall": 0.9235668789808917,
+        "f1": 0.8787878787878788
+      }
+    ],
+    "confusionMatrix": [
+      [
+        490,
+        16,
+        84
+      ],
+      [
+        9,
+        545,
+        28
+      ],
+      [
+        3,
+        45,
+        580
+      ]
+    ]
+  }
+}

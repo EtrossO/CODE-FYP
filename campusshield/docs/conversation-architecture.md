@@ -38,8 +38,8 @@ interface ScanResult {
 2. **ScannerTab** calls `App.handleCheck(url)`
 3. **App.tsx** calls `analyzeLinkSafety(url)` (4-stage pipeline)
 4. **Pipeline** (geminiService.ts):
-   - Stage 1: Heuristics (rule-based, 0 external calls) — IP check, brand spoof, typosquatting, IDN homograph, URL shorteners, phishing keywords, open redirects
-   - Stage 2: TF.js ML Classifier — 29 URL features → Neural Network (128→64→32→3 layers) → SAFE/SUSPICIOUS/UNSAFE + confidence
+   - Stage 1: Heuristics (rule-based, 0 external calls, in `heuristics.ts`) — IP check, brand spoof, typosquatting, IDN homograph, URL shorteners, phishing keywords, open redirects, dangerous schemes
+   - Stage 2: TF.js ML Classifier — 33 URL features → Neural Network (128→64→32→3 layers) → SAFE/SUSPICIOUS/UNSAFE + confidence
    - Stage 3: Google Safe Browsing API — checks known threat databases
    - Stage 4: Gemini 2.0 Flash (LLM) — analyzes URL context, returns JSON
 5. **Result saved** to IndexedDB via `db.scanHistory.add(result)`

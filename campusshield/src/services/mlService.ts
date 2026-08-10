@@ -85,6 +85,9 @@ function syntheticLabel(f: UrlFeatures): [number, number, number] {
 
   if (f.isTrusted === 1)       return [1, 0, 0];
 
+  if (f.suspiciousScheme === 1) return [0, 0, 1];
+  if (f.punycode === 1)         return [0, 1, 0];
+
   const riskScore =
     f.suspiciousTld           * 0.20 +
     f.dotCount                * 0.08 +
@@ -97,7 +100,9 @@ function syntheticLabel(f: UrlFeatures): [number, number, number] {
     f.repeatedCharsInPath     * 0.05 +
     f.domainPathRatio         * 0.05 +
     f.queryParamCount         * 0.05 +
-    f.pathSpecialCharRatio    * 0.03;
+    f.pathSpecialCharRatio    * 0.03 +
+    f.queryEntropy            * 0.10 +
+    f.brandSubstring          * 0.12;
 
   if (riskScore >= 0.45) return [0, 0, 1];
   if (riskScore >= 0.20) return [0, 1, 0];
@@ -120,6 +125,8 @@ function generateSyntheticSamples(n: number): { xs: number[][]; ys: number[][] }
     const spoof     = !isTrusted && !isIp && Math.random() < 0.06 ? 1 : 0;
     const highEntropyPath = !isTrusted && !isIp && !spoof && Math.random() < 0.15 ? 1 : 0;
     const hasTldPath = !isTrusted && Math.random() < 0.05 ? 1 : 0;
+    const hasBrandSub = !isTrusted && Math.random() < 0.08 ? 1 : 0;
+    const hasPunycode = !isTrusted && Math.random() < 0.04 ? 1 : 0;
 
     const f: UrlFeatures = {
       urlLength:         randomBetween(0.05, isTrusted ? 0.3 : 0.9),
@@ -138,6 +145,7 @@ function generateSyntheticSamples(n: number): { xs: number[][]; ys: number[][] }
       cyrillicChars:     !isTrusted && Math.random() < 0.03 ? 1 : 0,
       brandSpoof:        spoof ? 1 : 0,
       isTrusted,
+      punycode:          hasPunycode ? 1 : 0,
 
       // Path features
       pathLength:              randomBetween(0, isTrusted ? 0.3 : 0.8),
@@ -153,6 +161,9 @@ function generateSyntheticSamples(n: number): { xs: number[][]; ys: number[][] }
       doubleSlashInPath:       !isTrusted && Math.random() < 0.05 ? 1 : 0,
       repeatedCharsInPath:     !isTrusted && Math.random() < 0.04 ? 1 : 0,
       domainPathRatio:         randomBetween(0, isTrusted ? 0.3 : 0.8),
+      queryEntropy:            highEntropyPath ? randomBetween(0.5, 1) : randomBetween(0, 0.35),
+      brandSubstring:          hasBrandSub ? 1 : 0,
+      suspiciousScheme:        !isTrusted && Math.random() < 0.02 ? 1 : 0,
     };
 
     xs.push(Object.values(f) as number[]);

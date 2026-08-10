@@ -29,7 +29,7 @@ Campus Shield is a fully client-side single-page application that analyses URLs 
 | Stage | Layer | Technology | Description |
 |-------|-------|------------|-------------|
 | 1 | **Heuristics** | Rule-based ruleset | IP check, brand spoofing, typosquatting, IDN homograph attacks, URL shorteners, phishing keywords, open redirect detection |
-| 2 | **On-Device ML** | TensorFlow.js | Neural network classifier (128->64->32->3 layers) using 29 URL features — runs entirely in-browser |
+| 2 | **On-Device ML** | TensorFlow.js | Neural network classifier (128->64->32->3 layers) using 33 URL features — runs entirely in-browser |
 | 3 | **Safe Browsing** | Google Safe Browsing API v4 | Checks URL against Google's known threat database |
 | 4 | **Gemini AI** | Gemini 2.0 Flash (LLM) | Semantic URL analysis using Google's large language model |
 
@@ -68,14 +68,15 @@ campusshield/
 │   │   └── ThreatHeatmap.tsx     # Domain statistics heatmap
 │   ├── services/
 │   │   ├── geminiService.ts      # Main analysis pipeline (4 stages)
+│   │   ├── heuristics.ts         # Shared rule engine (preCheck, path heuristics, static sets)
 │   │   ├── mlService.ts          # TensorFlow.js model inference
 │   │   ├── safeBrowsingService.ts# Google Safe Browsing API client
-│   │   ├── features.ts           # 29-feature URL extraction + heuristics
+│   │   ├── features.ts           # 33-feature URL extraction
 │   │   └── statsService.ts       # Domain statistics aggregation
 │   └── db/
 │       └── database.ts           # Dexie IndexedDB setup
 ├── docs/                         # Architecture & testing documentation
-├── public/tfjs_model/            # Trained ML model files
+├── public/tfjs_model/            # Trained ML model + metrics.json
 ├── scripts/                      # ML training & testing scripts
 ├── datasets/                     # Training datasets (CSV)
 └── architecture.svg              # System architecture diagram
@@ -163,7 +164,20 @@ npm run pages:deploy   # builds and deploys via Wrangler
 The on-device ML model can be retrained using the provided scripts:
 
 ```bash
-npm run train-model   # trains TF.js model using dataset.csv
+npm run train-model            # trains TF.js model on dataset_balanced_9k.csv
+node scripts/trainModel.js --data ./dataset.csv --epochs 60
+node scripts/trainModel.js --data ./malicious_phish.csv --maxSamples 30000
+```
+
+Training:
+- Extracts the **same 33 features** the app uses at inference (imported from `src/services/features.ts` — no drift)
+- Applies class weighting, early stopping, a holdout test split, and reports a **confusion matrix + per-class precision/recall/F1**
+- Saves the model to `public/tfjs_model/` along with a `metrics.json` evaluation report
+
+Heuristic rule tests (no ML, no API keys):
+
+```bash
+node scripts/batchTest.mjs     # runs the real preCheck + pathHeuristics from src/services/heuristics.ts
 ```
 
 See `scripts/trainModel.js` for details.
